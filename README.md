@@ -1,48 +1,51 @@
 # AI Fact Checker
 
-An advanced fact-checking application powered by Perplexity AI that verifies statements using real-time information from reliable sources.
+A powerful fact-checking application that verifies statements using Perplexity AI's advanced language models and real-time web search capabilities.
 
-## Features
+## ✨ Features
 
-- **Real-time Fact Checking**: Analyzes statements for factual accuracy using the Perplexity AI API
-- **Multiple AI Models**:
-  - `sonar`: Fast, efficient fact-checking (127k context window)
-  - `sonar-pro`: Enhanced capabilities with larger context (200k window)
-  - `sonar-reasoning`: Detailed reasoning and citations (127k window)
-  - `sonar-reasoning-pro`: Premium model with extensive analysis (127k window)
-- **Comprehensive Analysis**:
-  - Factual assessment with confidence scores
-  - Detailed explanations with cited sources
+- 🔍 **Real-time Fact Checking**
+  - Instant verification using web search
+  - Confidence scores with detailed analysis
+  - Source citations with clickable links
   - Transparent thinking process
-  - Multiple reliable sources with direct links
-- **Modern UI/UX**:
+
+- 🤖 **Multiple AI Models**
+  - `sonar`: Fast checks (127k context)
+  - `sonar-pro`: Enhanced capabilities (200k context)
+  - `sonar-reasoning`: Detailed analysis with citations
+  - `sonar-reasoning-pro`: Premium model with extensive reasoning
+
+- 💻 **Modern Interface**
   - Clean, responsive design
-  - Dark/light mode support
+  - Dark/Light mode support
   - Real-time updates
-  - Source verification with clickable links
-- **Usage Statistics**: Track token consumption and API usage
+  - Usage statistics tracking
 
-## Tech Stack
+## 🚀 Quick Start
 
-- **Frontend**:
-  - React with TypeScript
-  - Tailwind CSS for styling
-  - Vite for build tooling
-- **Backend**:
-  - Node.js with Express
-  - TypeScript for type safety
-  - Perplexity AI API integration
+### Prerequisites
+- Node.js v18+
+- npm v8+
+- Perplexity AI API key
+- Git
 
-## Setup
+### Installation
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd ai-fact-checker
+#### Windows
+
+1. **Install Prerequisites**
+   ```powershell
+   # Install Node.js and npm from https://nodejs.org/
+   # Install Git from https://git-scm.com/download/windows
    ```
 
-2. **Install dependencies**:
-   ```bash
+2. **Clone and Install**
+   ```powershell
+   # Clone repository
+   git clone https://github.com/PierrunoYT/truth-check.git
+   cd truth-check
+
    # Install backend dependencies
    cd backend
    npm install
@@ -52,274 +55,222 @@ An advanced fact-checking application powered by Perplexity AI that verifies sta
    npm install
    ```
 
-3. **Configure environment variables**:
-   
-   Backend (.env):
-   ```
-   PORT=3000
-   PERPLEXITY_API_KEY=your_api_key_here
-   FRONTEND_URL=http://localhost:5173
+3. **Configure Environment**
+   ```powershell
+   # Backend (.env)
+   cd ../backend
+   copy .env.example .env
+   # Edit .env and add your Perplexity API key
+
+   # Frontend (.env)
+   cd ../frontend
+   copy .env.example .env
    ```
 
-   Frontend (.env):
-   ```
-   VITE_API_URL=http://localhost:3000/api
+4. **Start Development Servers**
+   ```powershell
+   # Terminal 1: Backend
+   cd backend
+   npm run dev
+
+   # Terminal 2: Frontend
+   cd frontend
+   npm run dev
    ```
 
-4. **Start the development servers**:
+#### macOS
+
+1. **Install Prerequisites**
    ```bash
-   # Start backend (from backend directory)
-   npm run dev
+   # Install Homebrew
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-   # Start frontend (from frontend directory)
-   npm run dev
+   # Install Node.js and Git
+   brew install node git
    ```
 
-5. **Access the application**:
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:3000
+2. **Clone and Install**
+   ```bash
+   # Clone repository
+   git clone https://github.com/PierrunoYT/truth-check.git
+   cd truth-check
 
-## Usage
+   # Install dependencies
+   cd backend && npm install
+   cd ../frontend && npm install
+   ```
 
-1. Select an AI model based on your needs:
-   - Use `sonar` or `sonar-pro` for quick fact checks
-   - Use `sonar-reasoning` or `sonar-reasoning-pro` for detailed analysis
+3. **Configure Environment**
+   ```bash
+   # Backend (.env)
+   cd ../backend
+   cp .env.example .env
+   # Edit .env and add your Perplexity API key
 
-2. Enter a statement to fact check
+   # Frontend (.env)
+   cd ../frontend
+   cp .env.example .env
+   ```
 
-3. Review the results:
-   - Factual assessment (true/false)
-   - Confidence level
+4. **Start Development Servers**
+   ```bash
+   # Terminal 1: Backend
+   cd backend && npm run dev
+
+   # Terminal 2: Frontend
+   cd frontend && npm run dev
+   ```
+
+#### Linux (Ubuntu/Debian)
+
+1. **Install Prerequisites**
+   ```bash
+   # Update package list
+   sudo apt update
+
+   # Install Node.js and npm
+   curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+   sudo apt install -y nodejs
+
+   # Install Git
+   sudo apt install -y git
+   ```
+
+2. **Clone and Install**
+   ```bash
+   # Clone repository
+   git clone https://github.com/PierrunoYT/truth-check.git
+   cd truth-check
+
+   # Install dependencies
+   cd backend && npm install
+   cd ../frontend && npm install
+   ```
+
+3. **Configure Environment**
+   ```bash
+   # Backend (.env)
+   cd ../backend
+   cp .env.example .env
+   # Edit .env and add your Perplexity API key
+
+   # Frontend (.env)
+   cd ../frontend
+   cp .env.example .env
+   ```
+
+4. **Start Development Servers**
+   ```bash
+   # Terminal 1: Backend
+   cd backend && npm run dev
+
+   # Terminal 2: Frontend
+   cd frontend && npm run dev
+   ```
+
+5. Open [http://localhost:5173](http://localhost:5173) in your browser
+
+## 📖 Usage
+
+1. **Select Model**
+   - `sonar/sonar-pro`: Quick fact checks
+   - `sonar-reasoning/pro`: Detailed analysis
+
+2. **Enter Statement**
+   - Type or paste any statement
+   - Click "Check Fact" or press Enter
+
+3. **Review Results**
+   - Factual assessment
+   - Confidence score
    - Detailed explanation
-   - Thinking process
-   - Source links with citations
+   - Source links
+   - Analysis process
 
-## API Endpoints
+## 🛠 Tech Stack
 
-### `POST /api/check-fact`
-Checks the factuality of a statement.
+- **Frontend**
+  - React + TypeScript
+  - Tailwind CSS
+  - Vite
 
-Request body:
-```json
+- **Backend**
+  - Node.js + Express
+  - TypeScript
+  - Perplexity AI API
+
+## 📡 API Endpoints
+
+### Check Fact
+```http
+POST /api/check-fact
+Content-Type: application/json
+
 {
-  "statement": "string",
-  "model": "sonar" | "sonar-pro" | "sonar-reasoning" | "sonar-reasoning-pro",
-  "stream": boolean
+  "statement": string,
+  "model": "sonar" | "sonar-pro" | "sonar-reasoning" | "sonar-reasoning-pro"
 }
 ```
 
-Response:
-```json
-{
-  "isFactual": boolean,
-  "confidence": number,
-  "explanation": string,
-  "sources": string[],
-  "thinking": string,
-  "usage": {
-    "prompt_tokens": number,
-    "completion_tokens": number,
-    "total_tokens": number
-  }
-}
+### Health Check
+```http
+GET /health
 ```
 
-### `GET /health`
-Checks the health of the API and Perplexity connection.
+## 🔧 Development
 
-## Development
-
-- Backend code is in `backend/src/`
-- Frontend code is in `frontend/src/`
-- API client is in `frontend/src/api/`
-- Components are in `frontend/src/components/`
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-MIT License - feel free to use this project for your own purposes.
-
-## Acknowledgments
-
-- Powered by [Perplexity AI](https://www.perplexity.ai/)
-- Built with [React](https://reactjs.org/) and [Express](https://expressjs.com/)
-- Styled with [Tailwind CSS](https://tailwindcss.com/)
-
-## ✨ Features
-
-- 🔍 Real-time fact checking with web search capabilities
-- 🤖 Choice between Sonar and Sonar Pro models
-- 📊 Detailed analysis with confidence scores
-- 📚 Source citations with clickable links
-- 🌓 Dark/Light mode support
-- 📱 Responsive design
-- 💻 Cross-platform compatibility
-
-## Prerequisites
-
-Before you begin, ensure you have the following installed:
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- [npm](https://www.npmjs.com/) (v8 or higher)
-- [Git](https://git-scm.com/)
-
-## Installation
-
-### Windows
-
-1. Open PowerShell or Command Prompt and clone the repository:
-```bash
-git clone https://github.com/PierrunoYT/truth-check.git
-cd truth-check
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Create a `.env` file in the root directory:
-```bash
-copy .env.example .env
-```
-
-4. Add your Perplexity API key to the `.env` file:
-```bash
-PERPLEXITY_API_KEY=your_api_key_here
-```
-
-### macOS/Linux
-
-1. Open Terminal and clone the repository:
-```bash
-git clone https://github.com/PierrunoYT/truth-check.git
-cd truth-check
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Create a `.env` file in the root directory:
-```bash
-cp .env.example .env
-```
-
-4. Add your Perplexity API key to the `.env` file:
-```bash
-echo "PERPLEXITY_API_KEY=your_api_key_here" >> .env
-```
-
-## Running the Application
-
-1. Start the backend server:
-```bash
-# From the root directory
-cd backend
-npm run dev
-```
-
-2. In a new terminal, start the frontend:
-```bash
-# From the root directory
-cd frontend
-npm run dev
-```
-
-3. Open your browser and navigate to:
-```
-http://localhost:5173
-```
-
-## Development
-
-### Project Structure
 ```
 truth-check/
-├── frontend/
+├── frontend/          # React application
 │   ├── src/
 │   │   ├── components/
 │   │   ├── api/
 │   │   └── ...
-│   ├── package.json
-│   └── ...
-├── backend/
+├── backend/           # Express server
 │   ├── src/
 │   │   ├── services/
 │   │   └── ...
-│   ├── package.json
-│   └── ...
-└── README.md
 ```
 
-### Environment Variables
-
-Backend (`.env`):
-```
-PORT=3000
-PERPLEXITY_API_KEY=your_api_key_here
-```
-
-Frontend (`.env`):
-```
-VITE_API_URL=http://localhost:3000/api
-```
-
-## API Models
-
-### Sonar
-- Default model
-- 127k token context window
-- Suitable for most fact-checking needs
-
-### Sonar Pro
-- Advanced model
-- 200k token context window
-- 8k token output limit
-- Better for complex fact-checking
-
-## Troubleshooting
+## ❗ Troubleshooting
 
 ### Common Issues
 
 1. **API Key Error**
-   - Ensure your Perplexity API key is correctly set in the `.env` file
-   - Check that the API key is valid and not expired
-
-2. **Connection Error**
-   - Verify both frontend and backend servers are running
-   - Check the correct ports are available (3000 for backend, 5173 for frontend)
-
-3. **Node Version Error**
-   - Ensure you're using Node.js v18 or higher
    ```bash
-   node --version
+   # Check API key is set
+   echo $PERPLEXITY_API_KEY    # macOS/Linux
+   echo %PERPLEXITY_API_KEY%   # Windows
    ```
-   - If needed, use nvm to switch Node versions:
+
+2. **Port Conflicts**
    ```bash
-   nvm use 18
+   # Check ports 3000 and 5173 are available
+   netstat -ano | findstr "3000 5173"  # Windows
+   lsof -i :3000,5173                  # macOS/Linux
+   ```
+
+3. **Node Version**
+   ```bash
+   # Ensure Node.js v18+
+   node --version
    ```
 
 ### Platform-Specific Issues
 
 #### Windows
 - If you get EACCES errors, run PowerShell as Administrator
-- If `npm install` fails, try:
-  ```bash
-  npm install --no-optional
-  ```
+- If `npm install` fails, try: `npm install --no-optional`
+- For permission issues: Right-click → Run as Administrator
 
 #### macOS
 - If you get permission errors:
   ```bash
   sudo chown -R $USER /usr/local/lib/node_modules
+  ```
+- If Homebrew is not found: Add to path
+  ```bash
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zshrc
   ```
 
 #### Linux
@@ -330,42 +281,25 @@ VITE_API_URL=http://localhost:3000/api
   echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.profile
   source ~/.profile
   ```
+- For permission issues:
+  ```bash
+  sudo chown -R $USER:$GROUP ~/.npm
+  sudo chown -R $USER:$GROUP ~/.config
+  ```
 
-## Contributing
+## 📄 License
 
-1. Fork the repository
-2. Create your feature branch:
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. Commit your changes:
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-4. Push to the branch:
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [Perplexity AI](https://www.perplexity.ai/) for their powerful API
-- [React](https://reactjs.org/) for the frontend framework
-- [Express](https://expressjs.com/) for the backend server
-- [Tailwind CSS](https://tailwindcss.com/) for styling
+MIT License - see [LICENSE](LICENSE)
 
 ## 👤 Author
 
 **PierrunoYT**
+- 🌐 [pierruno.com](https://pierruno.com)
+- 💻 [@PierrunoYT](https://github.com/PierrunoYT)
 
-* Website: [pierruno.com](https://pierruno.com)
-* GitHub: [@PierrunoYT](https://github.com/PierrunoYT)
+## 🙏 Acknowledgments
 
-## 🤝 Contributing
-
-Contributions, issues and feature requests are welcome! Feel free to check the [issues page](https://github.com/PierrunoYT/truth-check/issues). 
+- [Perplexity AI](https://www.perplexity.ai/)
+- [React](https://reactjs.org/)
+- [Express](https://expressjs.com/)
+- [Tailwind CSS](https://tailwindcss.com/) 
