@@ -1,10 +1,156 @@
-# AI Fact Checker 🔍
+# AI Fact Checker
 
-> A powerful AI-powered fact-checking application that verifies statements using Perplexity's Sonar models with web search capabilities.
+An advanced fact-checking application powered by Perplexity AI that verifies statements using real-time information from reliable sources.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/react-%5E18.0.0-blue)](https://reactjs.org/)
+## Features
+
+- **Real-time Fact Checking**: Analyzes statements for factual accuracy using the Perplexity AI API
+- **Multiple AI Models**:
+  - `sonar`: Fast, efficient fact-checking (127k context window)
+  - `sonar-pro`: Enhanced capabilities with larger context (200k window)
+  - `sonar-reasoning`: Detailed reasoning and citations (127k window)
+  - `sonar-reasoning-pro`: Premium model with extensive analysis (127k window)
+- **Comprehensive Analysis**:
+  - Factual assessment with confidence scores
+  - Detailed explanations with cited sources
+  - Transparent thinking process
+  - Multiple reliable sources with direct links
+- **Modern UI/UX**:
+  - Clean, responsive design
+  - Dark/light mode support
+  - Real-time updates
+  - Source verification with clickable links
+- **Usage Statistics**: Track token consumption and API usage
+
+## Tech Stack
+
+- **Frontend**:
+  - React with TypeScript
+  - Tailwind CSS for styling
+  - Vite for build tooling
+- **Backend**:
+  - Node.js with Express
+  - TypeScript for type safety
+  - Perplexity AI API integration
+
+## Setup
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd ai-fact-checker
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   # Install backend dependencies
+   cd backend
+   npm install
+
+   # Install frontend dependencies
+   cd ../frontend
+   npm install
+   ```
+
+3. **Configure environment variables**:
+   
+   Backend (.env):
+   ```
+   PORT=3000
+   PERPLEXITY_API_KEY=your_api_key_here
+   FRONTEND_URL=http://localhost:5173
+   ```
+
+   Frontend (.env):
+   ```
+   VITE_API_URL=http://localhost:3000/api
+   ```
+
+4. **Start the development servers**:
+   ```bash
+   # Start backend (from backend directory)
+   npm run dev
+
+   # Start frontend (from frontend directory)
+   npm run dev
+   ```
+
+5. **Access the application**:
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:3000
+
+## Usage
+
+1. Select an AI model based on your needs:
+   - Use `sonar` or `sonar-pro` for quick fact checks
+   - Use `sonar-reasoning` or `sonar-reasoning-pro` for detailed analysis
+
+2. Enter a statement to fact check
+
+3. Review the results:
+   - Factual assessment (true/false)
+   - Confidence level
+   - Detailed explanation
+   - Thinking process
+   - Source links with citations
+
+## API Endpoints
+
+### `POST /api/check-fact`
+Checks the factuality of a statement.
+
+Request body:
+```json
+{
+  "statement": "string",
+  "model": "sonar" | "sonar-pro" | "sonar-reasoning" | "sonar-reasoning-pro",
+  "stream": boolean
+}
+```
+
+Response:
+```json
+{
+  "isFactual": boolean,
+  "confidence": number,
+  "explanation": string,
+  "sources": string[],
+  "thinking": string,
+  "usage": {
+    "prompt_tokens": number,
+    "completion_tokens": number,
+    "total_tokens": number
+  }
+}
+```
+
+### `GET /health`
+Checks the health of the API and Perplexity connection.
+
+## Development
+
+- Backend code is in `backend/src/`
+- Frontend code is in `frontend/src/`
+- API client is in `frontend/src/api/`
+- Components are in `frontend/src/components/`
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+MIT License - feel free to use this project for your own purposes.
+
+## Acknowledgments
+
+- Powered by [Perplexity AI](https://www.perplexity.ai/)
+- Built with [React](https://reactjs.org/) and [Express](https://expressjs.com/)
+- Styled with [Tailwind CSS](https://tailwindcss.com/)
 
 ## ✨ Features
 
