@@ -294,7 +294,6 @@ MIT License - see [LICENSE](LICENSE)
 ## 👤 Author
 
 **PierrunoYT**
-- 🌐 [pierruno.com](https://pierruno.com)
 - 💻 [@PierrunoYT](https://github.com/PierrunoYT)
 
 ## 🙏 Acknowledgments
