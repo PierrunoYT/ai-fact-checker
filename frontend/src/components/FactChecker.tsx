@@ -151,6 +151,18 @@ export const FactChecker: React.FC = () => {
     setSearchRecency('month');
   };
 
+  const scrollToSource = (e: React.MouseEvent<HTMLAnchorElement>, sourceId: string) => {
+    e.preventDefault();
+    const element = document.getElementById(sourceId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('bg-blue-100', 'dark:bg-blue-900/30');
+      setTimeout(() => {
+        element.classList.remove('bg-blue-100', 'dark:bg-blue-900/30');
+      }, 2000);
+    }
+  };
+
   return (
     <div className={`h-full w-full flex ${isDarkMode ? 'dark bg-gray-900' : 'bg-white'}`}>
       <button
@@ -551,12 +563,20 @@ export const FactChecker: React.FC = () => {
                       if (index % 2 === 0) {
                         return part;
                       } else {
-                        const sourceIndex = parseInt(part) - 1;
+                        const citationId = parseInt(part);
+                        const sourceIndex = citationId - 1;
+
+                        // Get the citation URL if available
+                        const citationUrl = result.citations && result.citations.find(c => c.id === citationId)?.url;
+
                         return (
                           <a
                             key={index}
-                            href={`#source-${sourceIndex}`}
-                            className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline`}
+                            href={citationUrl ? citationUrl : `#source-${sourceIndex}`}
+                            onClick={citationUrl ? undefined : (e) => scrollToSource(e, `source-${sourceIndex}`)}
+                            target={citationUrl ? "_blank" : undefined}
+                            rel={citationUrl ? "noopener noreferrer" : undefined}
+                            className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline transition-colors duration-200`}
                           >
                             [{part}]
                           </a>
@@ -569,14 +589,52 @@ export const FactChecker: React.FC = () => {
                 <div className="mb-6">
                   <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Sources</h3>
                   <ul className={`list-none pl-0 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                    {result.sources.map((source, index) => (
-                      <li key={index} className="mb-2" id={`source-${index}`}>
-                        <span className="font-medium">[{index + 1}]</span>{' '}
-                        <a href={source} target="_blank" rel="noopener noreferrer" className="hover:underline break-all">
-                          {source}
-                        </a>
-                      </li>
-                    ))}
+                    {result.citations && result.citations.length > 0 ? (
+                      result.citations.map((citation, index) => (
+                        <li
+                          key={index}
+                          id={`source-${index}`}
+                          className="mb-3 p-2 rounded transition-colors duration-300"
+                        >
+                          <div className="flex flex-col">
+                            <div className="flex items-baseline">
+                              <span className="font-medium">[{citation.id}]</span>{' '}
+                              <a
+                                href={citation.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-2 hover:underline font-medium"
+                              >
+                                {citation.title || citation.domain || citation.url}
+                              </a>
+                            </div>
+                            {citation.domain && (
+                              <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} ml-6`}>
+                                {citation.domain}
+                              </span>
+                            )}
+                            {citation.snippet && (
+                              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} ml-6 mt-1`}>
+                                {citation.snippet}
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      ))
+                    ) : (
+                      result.sources.map((source, index) => (
+                        <li
+                          key={index}
+                          id={`source-${index}`}
+                          className="mb-2 p-2 rounded transition-colors duration-300"
+                        >
+                          <span className="font-medium">[{index + 1}]</span>{' '}
+                          <a href={source} target="_blank" rel="noopener noreferrer" className="hover:underline break-all">
+                            {source}
+                          </a>
+                        </li>
+                      ))
+                    )}
                   </ul>
                 </div>
 
@@ -588,12 +646,20 @@ export const FactChecker: React.FC = () => {
                         if (index % 2 === 0) {
                           return part;
                         } else {
-                          const sourceIndex = parseInt(part) - 1;
+                          const citationId = parseInt(part);
+                          const sourceIndex = citationId - 1;
+
+                          // Get the citation URL if available
+                          const citationUrl = result.citations && result.citations.find(c => c.id === citationId)?.url;
+
                           return (
                             <a
                               key={index}
-                              href={`#source-${sourceIndex}`}
-                              className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline`}
+                              href={citationUrl ? citationUrl : `#source-${sourceIndex}`}
+                              onClick={citationUrl ? undefined : (e) => scrollToSource(e, `source-${sourceIndex}`)}
+                              target={citationUrl ? "_blank" : undefined}
+                              rel={citationUrl ? "noopener noreferrer" : undefined}
+                              className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline transition-colors duration-200`}
                             >
                               [{part}]
                             </a>

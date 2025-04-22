@@ -128,13 +128,21 @@ interface FactCheckOptions {
   searchContextSize?: 'low' | 'medium' | 'high';
 }
 
+interface Citation {
+  id: number;
+  url: string;
+  title?: string;
+  domain?: string;
+  snippet?: string;
+}
+
 interface FactCheckResult {
   isFactual: boolean;
   confidence: number;
   explanation: string;
   sources: string[];
   thinking?: string;
-  citations?: string[];
+  citations?: Citation[];
   usage?: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -305,14 +313,33 @@ async function handleNormalRequest(
     const sanitizedContent = content.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
     log.debug('Attempting to parse sanitized content:', sanitizedContent);
     const result = JSON.parse(sanitizedContent);
-    
+
     // Ensure thinking process is included
     if (!result.thinking && result.explanation) {
       result.thinking = `Analysis process:\n1. Evaluated the statement: "${statement}"\n2. Searched and analyzed multiple sources\n3. Found that ${result.isFactual ? 'the statement is factual' : 'the statement is not factual'}\n4. Confidence level: ${result.confidence}%\n5. Key findings: ${result.explanation}`;
     }
+    // Process citations from the API response
+    const formattedCitations = (response.data.citations || []).map((citation: string, index: number) => {
+      // Extract domain from URL if possible
+      let domain = '';
+      try {
+        const url = new URL(citation);
+        domain = url.hostname;
+      } catch (e) {
+        // If URL parsing fails, leave domain empty
+      }
+
+      return {
+        id: index + 1,
+        url: citation,
+        domain,
+        title: `Source ${index + 1}` // Default title if none provided
+      };
+    });
+
     return {
       ...result,
-      citations: response.data.citations || [],
+      citations: formattedCitations,
       usage: response.data.usage || {
         prompt_tokens: 0,
         completion_tokens: 0,
@@ -333,18 +360,37 @@ async function handleNormalRequest(
       const sanitizedJsonContent = jsonContent.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
       log.debug('Extracted and sanitized JSON content:', sanitizedJsonContent);
       const result = JSON.parse(sanitizedJsonContent);
-      
+
       // Ensure thinking process is included
       if (!result.thinking && result.explanation) {
         result.thinking = `Analysis process:\n1. Evaluated the statement: "${statement}"\n2. Searched and analyzed multiple sources\n3. Found that ${result.isFactual ? 'the statement is factual' : 'the statement is not factual'}\n4. Confidence level: ${result.confidence}%\n5. Key findings: ${result.explanation}`;
       }
+      // Process citations from the API response
+      const formattedCitations = (response.data.citations || []).map((citation: string, index: number) => {
+        // Extract domain from URL if possible
+        let domain = '';
+        try {
+          const url = new URL(citation);
+          domain = url.hostname;
+        } catch (e) {
+          // If URL parsing fails, leave domain empty
+        }
+
+        return {
+          id: index + 1,
+          url: citation,
+          domain,
+          title: `Source ${index + 1}` // Default title if none provided
+        };
+      });
+
       return {
         isFactual: result.isFactual ?? false,
         confidence: result.confidence ?? 0,
         explanation: result.explanation ?? 'No explanation provided',
         sources: result.sources ?? [],
         thinking: result.thinking,
-        citations: response.data.citations || [],
+        citations: formattedCitations,
         usage: response.data.usage || {
           prompt_tokens: 0,
           completion_tokens: 0,

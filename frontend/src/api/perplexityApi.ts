@@ -20,6 +20,14 @@ const log = {
 // Types
 export type PerplexityModel = 'sonar' | 'sonar-pro' | 'sonar-reasoning' | 'sonar-reasoning-pro';
 
+export interface Citation {
+  id: number;
+  url: string;
+  title?: string;
+  domain?: string;
+  snippet?: string;
+}
+
 export interface FactCheckResponse {
   isFactual: boolean;
   confidence: number;
@@ -31,7 +39,7 @@ export interface FactCheckResponse {
     completion_tokens: number;
     total_tokens: number;
   };
-  citations?: string[];
+  citations?: Citation[];
 }
 
 export interface FactCheckOptions {
