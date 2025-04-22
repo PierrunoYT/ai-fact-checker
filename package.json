@@ -1,0 +1,11 @@
+{
+  "name": "ai-fact-checker",
+  "version": "1.0.0",
+  "description": "AI-powered fact checking application",
+  "scripts": {
+    "dev": "node start-dev.js",
+    "install-all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "author": "PierrunoYT",
+  "license": "MIT"
+}
