@@ -44,6 +44,9 @@ export interface FactCheckOptions {
   topP?: number;
   searchDomains?: string[];
   searchRecency?: 'month' | 'week' | 'day' | 'hour';
+  searchAfterDate?: string; // MM/DD/YYYY format
+  searchBeforeDate?: string; // MM/DD/YYYY format
+  searchContextSize?: 'low' | 'medium' | 'high';
   returnImages?: boolean;
   returnRelatedQuestions?: boolean;
   onThinking?: (thinking: string) => void;
@@ -57,7 +60,7 @@ const apiClient = axios.create(API_CONFIG);
 const handleApiError = (error: unknown): never => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<{ error?: string; details?: string }>;
-    
+
     // Log the full error details
     log.error('API Request Failed:', {
       code: axiosError.code,
@@ -72,13 +75,13 @@ const handleApiError = (error: unknown): never => {
         headers: axiosError.config?.headers
       }
     });
-    
+
     // Handle timeout specifically
     if (axiosError.code === 'ECONNABORTED') {
       throw new Error('Request timed out. The fact-checking process is taking longer than expected. Please try again.');
     }
 
-    const errorMessage = axiosError.response?.data?.error || 
+    const errorMessage = axiosError.response?.data?.error ||
                         axiosError.response?.data?.details ||
                         axiosError.message;
 
@@ -108,14 +111,14 @@ const handleApiError = (error: unknown): never => {
 // API Methods
 export const factCheckApi = {
   async checkFact(
-    statement: string, 
+    statement: string,
     options: FactCheckOptions = {}
   ): Promise<FactCheckResponse> {
     log.info(`Checking fact: "${statement.slice(0, 100)}${statement.length > 100 ? '...' : ''}"`);
     log.debug('Options:', options);
 
     try {
-      const { 
+      const {
         model,
         maxTokens,
         temperature,
@@ -125,11 +128,14 @@ export const factCheckApi = {
         topP,
         searchDomains,
         searchRecency,
+        searchAfterDate,
+        searchBeforeDate,
+        searchContextSize,
         returnImages,
         returnRelatedQuestions,
-        stream = false 
+        stream = false
       } = options;
-      
+
       const response = await apiClient.post<FactCheckResponse>('/check-fact', {
         statement,
         model,
@@ -141,6 +147,9 @@ export const factCheckApi = {
         topP,
         searchDomains,
         searchRecency,
+        searchAfterDate,
+        searchBeforeDate,
+        searchContextSize,
         returnImages,
         returnRelatedQuestions,
         stream
@@ -163,7 +172,7 @@ export const factCheckApi = {
     log.debug('Stream options:', options);
 
     try {
-      const { 
+      const {
         model,
         maxTokens,
         temperature,
@@ -173,9 +182,12 @@ export const factCheckApi = {
         topP,
         searchDomains,
         searchRecency,
+        searchAfterDate,
+        searchBeforeDate,
+        searchContextSize,
         returnImages,
         returnRelatedQuestions,
-        onThinking 
+        onThinking
       } = options;
 
       const response = await apiClient.post('/check-fact', {
@@ -189,6 +201,9 @@ export const factCheckApi = {
         topP,
         searchDomains,
         searchRecency,
+        searchAfterDate,
+        searchBeforeDate,
+        searchContextSize,
         returnImages,
         returnRelatedQuestions,
         stream: true
@@ -205,7 +220,7 @@ export const factCheckApi = {
 
       return new Promise((resolve, reject) => {
         let result: FactCheckResponse | null = null;
-        
+
         // Set a timeout for the entire stream
         const streamTimeout = setTimeout(() => {
           log.error('Stream timeout reached');
@@ -216,7 +231,7 @@ export const factCheckApi = {
           try {
             const data = JSON.parse(chunk.toString());
             log.debug('Stream chunk received:', data);
-            
+
             if (data.type === 'thinking' && onThinking) {
               log.debug('Thinking update:', data.content);
               onThinking(data.content);

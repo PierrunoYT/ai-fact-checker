@@ -58,10 +58,15 @@ interface PerplexityRequestOptions {
   return_related_questions?: boolean;
   search_domain_filter?: string[];
   search_recency_filter?: 'month' | 'week' | 'day' | 'hour';
+  search_after_date_filter?: string; // MM/DD/YYYY format
+  search_before_date_filter?: string; // MM/DD/YYYY format
   stream?: boolean;
   temperature?: number;
   top_k?: number;
   top_p?: number;
+  web_search_options?: {
+    search_context_size?: 'low' | 'medium' | 'high';
+  };
 }
 
 interface PerplexityResponse {
@@ -116,8 +121,11 @@ interface FactCheckOptions {
   topP?: number;
   searchDomains?: string[];
   searchRecency?: 'month' | 'week' | 'day' | 'hour';
+  searchAfterDate?: string; // MM/DD/YYYY format
+  searchBeforeDate?: string; // MM/DD/YYYY format
   returnImages?: boolean;
   returnRelatedQuestions?: boolean;
+  searchContextSize?: 'low' | 'medium' | 'high';
 }
 
 interface FactCheckResult {
@@ -164,15 +172,15 @@ const createPerplexityRequest = (
 ): PerplexityRequestOptions => {
   const model = options.model || CONFIG.DEFAULT_MODEL;
   const modelConfig = CONFIG.MODELS[model];
-  
+
   log.info(`Creating request for model: ${model}, stream: ${stream}`);
   log.debug('Request options:', options);
 
   return {
     model,
     messages: [
-      { 
-        role: 'system', 
+      {
+        role: 'system',
         content: `You are a fact-checking AI assistant. Analyze the given statement and respond with a JSON object containing:
 - isFactual: boolean indicating if the statement is factually accurate
 - confidence: number from 0-100 indicating confidence level
@@ -200,8 +208,13 @@ Respond ONLY with the JSON object, no markdown or other formatting.`
     stream,
     search_domain_filter: options.searchDomains,
     search_recency_filter: options.searchRecency,
+    search_after_date_filter: options.searchAfterDate,
+    search_before_date_filter: options.searchBeforeDate,
     return_images: options.returnImages ?? false,
-    return_related_questions: options.returnRelatedQuestions ?? false
+    return_related_questions: options.returnRelatedQuestions ?? false,
+    web_search_options: options.searchContextSize ? {
+      search_context_size: options.searchContextSize
+    } : undefined
   };
 };
 
@@ -225,7 +238,7 @@ export async function checkFactWithPerplexity(
   };
 
   try {
-    return streamHandler 
+    return streamHandler
       ? await handleStreamingRequest(statement, options, headers, streamHandler)
       : await handleNormalRequest(statement, options, headers);
   } catch (error) {
@@ -252,7 +265,7 @@ export async function checkFactWithPerplexity(
         throw new Error(`Perplexity API error: ${error.response.data.error}`);
       }
     }
-    
+
     const enhancedError = new Error(
       error instanceof Error ? error.message : 'Unknown error occurred'
     );
@@ -268,7 +281,7 @@ async function handleNormalRequest(
   headers: Record<string, string>
 ): Promise<FactCheckResult> {
   log.info('Making normal (non-streaming) request');
-  
+
   const response = await axios.post(
     CONFIG.API_URL,
     createPerplexityRequest(statement, options, false),
@@ -346,7 +359,7 @@ async function handleStreamingRequest(
   streamHandler: StreamHandler
 ): Promise<FactCheckResult> {
   log.info('Making streaming request');
-  
+
   const response = await axios.post<NodeJS.ReadableStream>(
     CONFIG.API_URL,
     createPerplexityRequest(statement, options, true),
@@ -382,10 +395,10 @@ async function handleStreamingRequest(
 
     const handleStreamData = (chunk: Buffer) => {
       const lines = chunk.toString().split('\n');
-      
+
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
-        
+
         const data = line.slice(6);
         if (data === '[DONE]') {
           log.info('Stream completed');
@@ -503,4 +516,4 @@ export async function checkPerplexityApiHealth(): Promise<boolean> {
     }
     return false;
   }
-} 
+}

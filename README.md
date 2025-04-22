@@ -16,6 +16,12 @@ A powerful fact-checking application that verifies statements using Perplexity A
   - `sonar-reasoning`: Detailed analysis with citations
   - `sonar-reasoning-pro`: Premium model with extensive reasoning
 
+- 🌐 **Advanced Search Options**
+  - Domain filtering to include/exclude specific websites
+  - Date range filtering for time-specific research
+  - Adjustable search context size (low/medium/high)
+  - Recency filters (month/week/day/hour)
+
 - 💻 **Modern Interface**
   - Clean, responsive design
   - Dark/Light mode support
@@ -102,7 +108,20 @@ Content-Type: application/json
 
 {
   "statement": string,
-  "model": "sonar" | "sonar-pro" | "sonar-reasoning" | "sonar-reasoning-pro"
+  "model": "sonar" | "sonar-pro" | "sonar-reasoning" | "sonar-reasoning-pro",
+  "maxTokens": number,
+  "temperature": number,
+  "frequencyPenalty": number,
+  "presencePenalty": number,
+  "topK": number,
+  "topP": number,
+  "searchDomains": string[],
+  "searchRecency": "month" | "week" | "day" | "hour",
+  "searchAfterDate": string, // MM/DD/YYYY format
+  "searchBeforeDate": string, // MM/DD/YYYY format
+  "searchContextSize": "low" | "medium" | "high",
+  "returnImages": boolean,
+  "returnRelatedQuestions": boolean
 }
 ```
 
@@ -159,4 +178,4 @@ MIT License - see [LICENSE](LICENSE)
 - [Perplexity AI](https://www.perplexity.ai/)
 - [React](https://reactjs.org/)
 - [Express](https://expressjs.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
