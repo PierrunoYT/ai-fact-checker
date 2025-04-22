@@ -47,7 +47,10 @@ export const FactChecker: React.FC = () => {
       {/* Theme Toggle */}
       <button
         onClick={() => setIsDarkMode(!isDarkMode)}
-        className="fixed top-4 right-4 p-2 rounded-full bg-opacity-20 hover:bg-opacity-30 transition-colors duration-200"
+        className={`fixed top-4 right-4 p-2 rounded-full transition-all duration-200
+                   ${isDarkMode 
+                     ? 'bg-gray-800 hover:bg-gray-700' 
+                     : 'bg-gray-100 hover:bg-gray-200 shadow-md'}`}
         aria-label="Toggle theme"
       >
         {isDarkMode ? (
@@ -56,7 +59,7 @@ export const FactChecker: React.FC = () => {
                   d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
         ) : (
-          <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
                   d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
           </svg>
@@ -162,9 +165,14 @@ export const FactChecker: React.FC = () => {
           <button
             type="submit"
             disabled={loading || !statement.trim()}
-            className={`w-full bg-blue-500 text-white py-3 rounded-lg text-base font-medium
-                     hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-colors duration-200`}
+            className={`w-full py-3 rounded-lg text-base font-medium
+                     transition-all duration-200
+                     ${loading || !statement.trim() 
+                       ? 'opacity-50 cursor-not-allowed bg-gray-400 dark:bg-gray-600' 
+                       : isDarkMode
+                         ? 'bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50'
+                         : 'bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50'
+                     }`}
           >
             {loading ? 'Analyzing...' : 'Check Fact'}
           </button>
@@ -344,4 +352,4 @@ export const FactChecker: React.FC = () => {
       </div>
     </div>
   );
-}; 
+};
