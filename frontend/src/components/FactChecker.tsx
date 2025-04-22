@@ -546,14 +546,32 @@ export const FactChecker: React.FC = () => {
               <div className="p-6">
                 <div className="mb-6">
                   <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Explanation</h3>
-                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{result.explanation}</p>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {result.explanation.split(/\[(\d+)\]/).map((part, index) => {
+                      if (index % 2 === 0) {
+                        return part;
+                      } else {
+                        const sourceIndex = parseInt(part) - 1;
+                        return (
+                          <a
+                            key={index}
+                            href={`#source-${sourceIndex}`}
+                            className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline`}
+                          >
+                            [{part}]
+                          </a>
+                        );
+                      }
+                    })}
+                  </p>
                 </div>
 
                 <div className="mb-6">
                   <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Sources</h3>
-                  <ul className={`list-disc pl-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  <ul className={`list-none pl-0 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                     {result.sources.map((source, index) => (
-                      <li key={index} className="mb-1">
+                      <li key={index} className="mb-2" id={`source-${index}`}>
+                        <span className="font-medium">[{index + 1}]</span>{' '}
                         <a href={source} target="_blank" rel="noopener noreferrer" className="hover:underline break-all">
                           {source}
                         </a>
@@ -566,7 +584,22 @@ export const FactChecker: React.FC = () => {
                   <div>
                     <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Analysis Process</h3>
                     <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} whitespace-pre-wrap ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {thinking}
+                      {thinking.split(/\[(\d+)\]/).map((part, index) => {
+                        if (index % 2 === 0) {
+                          return part;
+                        } else {
+                          const sourceIndex = parseInt(part) - 1;
+                          return (
+                            <a
+                              key={index}
+                              href={`#source-${sourceIndex}`}
+                              className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline`}
+                            >
+                              [{part}]
+                            </a>
+                          );
+                        }
+                      })}
                     </div>
                   </div>
                 )}
