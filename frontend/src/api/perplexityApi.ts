@@ -43,7 +43,7 @@ export interface FactCheckOptions {
   topK?: number;
   topP?: number;
   searchDomains?: string[];
-  searchRecency?: 'month' | 'week' | 'day' | 'hour';
+  searchRecency?: 'month' | 'week' | 'day' | 'hour' | undefined;
   searchAfterDate?: string; // MM/DD/YYYY format
   searchBeforeDate?: string; // MM/DD/YYYY format
   searchContextSize?: 'low' | 'medium' | 'high';
