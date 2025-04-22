@@ -301,8 +301,11 @@ async function handleNormalRequest(
   }
 
   try {
-    log.debug('Attempting to parse content directly:', content);
-    const result = JSON.parse(content);
+    // Sanitize the content by removing control characters
+    const sanitizedContent = content.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    log.debug('Attempting to parse sanitized content:', sanitizedContent);
+    const result = JSON.parse(sanitizedContent);
+    
     // Ensure thinking process is included
     if (!result.thinking && result.explanation) {
       result.thinking = `Analysis process:\n1. Evaluated the statement: "${statement}"\n2. Searched and analyzed multiple sources\n3. Found that ${result.isFactual ? 'the statement is factual' : 'the statement is not factual'}\n4. Confidence level: ${result.confidence}%\n5. Key findings: ${result.explanation}`;
@@ -326,8 +329,11 @@ async function handleNormalRequest(
 
     try {
       const jsonContent = jsonMatch[1] || jsonMatch[0];
-      log.debug('Extracted JSON content:', jsonContent);
-      const result = JSON.parse(jsonContent);
+      // Sanitize the extracted JSON content
+      const sanitizedJsonContent = jsonContent.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+      log.debug('Extracted and sanitized JSON content:', sanitizedJsonContent);
+      const result = JSON.parse(sanitizedJsonContent);
+      
       // Ensure thinking process is included
       if (!result.thinking && result.explanation) {
         result.thinking = `Analysis process:\n1. Evaluated the statement: "${statement}"\n2. Searched and analyzed multiple sources\n3. Found that ${result.isFactual ? 'the statement is factual' : 'the statement is not factual'}\n4. Confidence level: ${result.confidence}%\n5. Key findings: ${result.explanation}`;
