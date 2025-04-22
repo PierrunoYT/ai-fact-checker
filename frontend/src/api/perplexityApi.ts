@@ -136,6 +136,18 @@ export const factCheckApi = {
         stream = false
       } = options;
 
+      // Only include date-related parameters if they are defined
+      const dateParams = {};
+      if (searchRecency) {
+        dateParams['searchRecency'] = searchRecency;
+      }
+      if (searchAfterDate) {
+        dateParams['searchAfterDate'] = searchAfterDate;
+      }
+      if (searchBeforeDate) {
+        dateParams['searchBeforeDate'] = searchBeforeDate;
+      }
+
       const response = await apiClient.post<FactCheckResponse>('/check-fact', {
         statement,
         model,
@@ -146,13 +158,11 @@ export const factCheckApi = {
         topK,
         topP,
         searchDomains,
-        searchRecency,
-        searchAfterDate,
-        searchBeforeDate,
         searchContextSize,
         returnImages,
         returnRelatedQuestions,
-        stream
+        stream,
+        ...dateParams
       }, {
         timeout: 120000 // 2 minutes timeout for fact checking
       });
@@ -200,9 +210,6 @@ export const factCheckApi = {
         topK,
         topP,
         searchDomains,
-        searchRecency,
-        searchAfterDate,
-        searchBeforeDate,
         searchContextSize,
         returnImages,
         returnRelatedQuestions,

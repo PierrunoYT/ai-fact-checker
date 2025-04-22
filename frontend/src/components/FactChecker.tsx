@@ -10,7 +10,6 @@ export const FactChecker: React.FC = () => {
   const [thinking, setThinking] = useState<string>('');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
-  // New state variables for advanced options
   const [searchContextSize, setSearchContextSize] = useState<'low' | 'medium' | 'high'>('low');
   const [searchAfterDate, setSearchAfterDate] = useState('');
   const [searchBeforeDate, setSearchBeforeDate] = useState('');
@@ -37,21 +36,17 @@ export const FactChecker: React.FC = () => {
     setThinking('');
 
     try {
-      // Parse domains string into array
       const domainsArray = searchDomains
         ? searchDomains.split(',').map(domain => domain.trim()).filter(Boolean)
         : undefined;
 
-      // Determine which date filter to use
       const dateFilterOptions = searchAfterDate || searchBeforeDate
         ? {
-            // Use date range filter if custom dates are set
             searchAfterDate: searchAfterDate || undefined,
             searchBeforeDate: searchBeforeDate || undefined,
-            searchRecency: undefined // Don't use both filters at once
+            searchRecency: undefined
           }
         : {
-            // Otherwise use recency filter
             searchAfterDate: undefined,
             searchBeforeDate: undefined,
             searchRecency
@@ -77,11 +72,9 @@ export const FactChecker: React.FC = () => {
     }
   };
 
-  // Format date for input field (YYYY-MM-DD)
   const formatDateForInput = (dateString: string) => {
     if (!dateString) return '';
 
-    // Convert from MM/DD/YYYY to YYYY-MM-DD
     const parts = dateString.split('/');
     if (parts.length === 3) {
       return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
@@ -89,11 +82,9 @@ export const FactChecker: React.FC = () => {
     return dateString;
   };
 
-  // Format date for API (MM/DD/YYYY)
   const formatDateForApi = (dateString: string) => {
     if (!dateString) return '';
 
-    // Convert from YYYY-MM-DD to MM/DD/YYYY
     const parts = dateString.split('-');
     if (parts.length === 3) {
       return `${parts[1]}/${parts[2]}/${parts[0]}`;
@@ -101,7 +92,6 @@ export const FactChecker: React.FC = () => {
     return dateString;
   };
 
-  // Format date object to MM/DD/YYYY string
   const formatDateObjectForApi = (date: Date): string => {
     const month = (date.getMonth() + 1).toString();
     const day = date.getDate().toString();
@@ -109,70 +99,63 @@ export const FactChecker: React.FC = () => {
     return `${month}/${day}/${year}`;
   };
 
-  // Set date range presets
-  const setDateRangePreset = (days: number) => {
-    // For common time periods, use the recency filter which is more efficient
-    if (days === 1) {
+  const setDateRangePreset = (days: number | null) => {
+    if (days === null) {
+      setSearchRecency(undefined);
+      setSearchAfterDate('');
+      setSearchBeforeDate('');
+    } else if (days === 1) {
       setSearchRecency('day');
-      // Clear date range filters when using recency
       setSearchBeforeDate('');
       setSearchAfterDate('');
     } else if (days === 7) {
       setSearchRecency('week');
-      // Clear date range filters when using recency
       setSearchBeforeDate('');
       setSearchAfterDate('');
     } else if (days === 30) {
       setSearchRecency('month');
-      // Clear date range filters when using recency
       setSearchBeforeDate('');
       setSearchAfterDate('');
     } else {
-      // For other periods (like 365 days), use the date range filter
       const today = new Date();
       const beforeDate = today;
 
-      // Calculate after date by subtracting days
       const afterDate = new Date();
       afterDate.setDate(afterDate.getDate() - days);
 
       setSearchBeforeDate(formatDateObjectForApi(beforeDate));
       setSearchAfterDate(formatDateObjectForApi(afterDate));
-      // Clear recency filter when using date range
-      setSearchRecency('month'); // Default value
+      setSearchRecency(undefined);
     }
   };
 
   const handleAfterDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const dateValue = formatDateForApi(e.target.value);
     setSearchAfterDate(dateValue);
-    // When setting custom dates, clear the recency filter
     if (dateValue) {
-      setSearchRecency('month'); // Reset to default
+      setSearchRecency('month');
     }
   };
 
   const handleBeforeDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const dateValue = formatDateForApi(e.target.value);
     setSearchBeforeDate(dateValue);
-    // When setting custom dates, clear the recency filter
     if (dateValue) {
-      setSearchRecency('month'); // Reset to default
+      setSearchRecency('month');
     }
   };
 
   const clearDateRange = () => {
     setSearchAfterDate('');
     setSearchBeforeDate('');
-    setSearchRecency('month'); // Reset to default
+    setSearchRecency('month');
   };
 
   return (
     <div className={`h-full w-full flex ${isDarkMode ? 'dark bg-gray-900' : 'bg-white'}`}>
-      {/* Theme Toggle */}
       <button
         onClick={() => setIsDarkMode(!isDarkMode)}
-        className={`fixed top-4 right-4 p-2 rounded-full transition-all duration-200
+        className={`fixed top-4 right-4 p-2 rounded-full transition-all duration-200 z-50
                    ${isDarkMode
                      ? 'bg-gray-800 hover:bg-gray-700'
                      : 'bg-gray-100 hover:bg-gray-200 shadow-md'}`}
@@ -191,8 +174,7 @@ export const FactChecker: React.FC = () => {
         )}
       </button>
 
-      {/* Left Panel */}
-      <div className={`w-[500px] ${isDarkMode ? 'bg-gray-800' : 'bg-white'} h-full flex flex-col overflow-y-auto`}>
+      <div className={`w-[500px] ${isDarkMode ? 'bg-gray-800' : 'bg-white'} h-full flex flex-col overflow-y-auto pt-16`}>
         <div className="p-8">
           <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
             AI Fact Checker
@@ -203,7 +185,6 @@ export const FactChecker: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-8 pt-0">
-          {/* Model Selection */}
           <div className="mb-4">
             <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
               Model
@@ -263,7 +244,6 @@ export const FactChecker: React.FC = () => {
             </p>
           </div>
 
-          {/* Advanced Options Toggle */}
           <div className="mb-4">
             <button
               type="button"
@@ -282,10 +262,8 @@ export const FactChecker: React.FC = () => {
             </button>
           </div>
 
-          {/* Advanced Options */}
           {showAdvancedOptions && (
             <div className={`mb-4 p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} animate-fade-in`}>
-              {/* Search Context Size */}
               <div className="mb-4">
                 <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
                   Search Context Size
@@ -330,54 +308,71 @@ export const FactChecker: React.FC = () => {
                 </p>
               </div>
 
-              {/* Date Filter */}
               <div className="mb-4">
                 <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
                   Date Filter
                 </label>
 
-                {/* Date Range Presets */}
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setDateRangePreset(null)}
+                    className={`px-2 py-1 text-xs rounded ${
+                      !searchRecency && !searchAfterDate && !searchBeforeDate ?
+                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
+                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
+                    }`}
+                  >
+                    No Date Filter
+                  </button>
                   <button
                     type="button"
                     onClick={() => setDateRangePreset(1)}
-                    className={`px-3 py-1.5 text-xs rounded-md ${searchRecency === 'day' ?
-                      (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                      (isDarkMode ? 'bg-gray-600 hover:bg-blue-600 text-white' : 'bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700')}`}
+                    className={`px-2 py-1 text-xs rounded ${
+                      searchRecency === 'day' ?
+                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
+                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
+                    }`}
                   >
                     Last 24h
                   </button>
                   <button
                     type="button"
                     onClick={() => setDateRangePreset(7)}
-                    className={`px-3 py-1.5 text-xs rounded-md ${searchRecency === 'week' ?
-                      (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                      (isDarkMode ? 'bg-gray-600 hover:bg-blue-600 text-white' : 'bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700')}`}
+                    className={`px-2 py-1 text-xs rounded ${
+                      searchRecency === 'week' ?
+                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
+                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
+                    }`}
                   >
                     Last Week
                   </button>
                   <button
                     type="button"
                     onClick={() => setDateRangePreset(30)}
-                    className={`px-3 py-1.5 text-xs rounded-md ${searchRecency === 'month' && !searchAfterDate && !searchBeforeDate ?
-                      (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                      (isDarkMode ? 'bg-gray-600 hover:bg-blue-600 text-white' : 'bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700')}`}
+                    className={`px-2 py-1 text-xs rounded ${
+                      searchRecency === 'month' && !searchAfterDate && !searchBeforeDate ?
+                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
+                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
+                    }`}
                   >
                     Last Month
                   </button>
                   <button
                     type="button"
                     onClick={() => setDateRangePreset(365)}
-                    className={`px-3 py-1.5 text-xs rounded-md ${searchAfterDate && searchAfterDate.includes((new Date().getFullYear() - 1).toString()) ?
-                      (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                      (isDarkMode ? 'bg-gray-600 hover:bg-blue-600 text-white' : 'bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700')}`}
+                    className={`px-2 py-1 text-xs rounded ${
+                      searchAfterDate && searchAfterDate.includes((new Date().getFullYear() - 1).toString()) ?
+                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
+                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
+                    }`}
                   >
                     Last Year
                   </button>
                   <button
                     type="button"
                     onClick={clearDateRange}
-                    className={`px-3 py-1.5 text-xs rounded-md ${
+                    className={`px-2 py-1 text-xs rounded ${
                       isDarkMode
                         ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
                         : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
@@ -430,7 +425,6 @@ export const FactChecker: React.FC = () => {
                 </p>
               </div>
 
-              {/* Domain Filters */}
               <div className="mb-4">
                 <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
                   Domain Filters
@@ -450,8 +444,6 @@ export const FactChecker: React.FC = () => {
                   Comma-separated list of domains to include or exclude (prefix with - to exclude). Example: wikipedia.org, -pinterest.com
                 </p>
               </div>
-
-
             </div>
           )}
 
@@ -496,8 +488,7 @@ export const FactChecker: React.FC = () => {
         </form>
       </div>
 
-      {/* Right Panel */}
-      <div className={`flex-1 h-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} overflow-y-auto`}>
+      <div className={`flex-1 h-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} overflow-y-auto pt-16`}>
         <div className="p-8">
           {error && (
             <div className={`${isDarkMode ? 'bg-red-900/50' : 'bg-red-50'} border-l-4 border-red-500 rounded p-4 mb-6 animate-fade-in`}>
@@ -516,7 +507,6 @@ export const FactChecker: React.FC = () => {
 
           {result && (
             <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg overflow-hidden animate-fade-in`}>
-              {/* Result Header */}
               <div className={`p-6 ${
                 result.isFactual ?
                   (isDarkMode ? 'bg-green-900/30' : 'bg-green-50') :
@@ -553,14 +543,12 @@ export const FactChecker: React.FC = () => {
                 </div>
               </div>
 
-              {/* Result Body */}
               <div className="p-6">
                 <div className="mb-6">
                   <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Explanation</h3>
                   <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{result.explanation}</p>
                 </div>
 
-                {/* Sources */}
                 <div className="mb-6">
                   <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Sources</h3>
                   <ul className={`list-disc pl-5 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -574,7 +562,6 @@ export const FactChecker: React.FC = () => {
                   </ul>
                 </div>
 
-                {/* Thinking Process */}
                 {thinking && (
                   <div>
                     <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Analysis Process</h3>
@@ -584,7 +571,6 @@ export const FactChecker: React.FC = () => {
                   </div>
                 )}
 
-                {/* Usage Stats */}
                 {result.usage && (
                   <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <h3 className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Usage Statistics</h3>
