@@ -14,7 +14,7 @@ export const FactChecker: React.FC = () => {
   const [searchAfterDate, setSearchAfterDate] = useState('');
   const [searchBeforeDate, setSearchBeforeDate] = useState('');
   const [searchDomains, setSearchDomains] = useState('');
-  const [searchRecency, setSearchRecency] = useState<'month' | 'week' | 'day' | 'hour' | undefined>('month');
+  const [searchRecency, setSearchRecency] = useState<'month' | 'week' | 'day' | 'hour'>('month');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
