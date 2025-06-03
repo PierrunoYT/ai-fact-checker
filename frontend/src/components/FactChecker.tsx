@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { factCheckApi, type FactCheckResponse, type PerplexityModel } from '../api/perplexityApi';
+import { ModelSelector } from './ModelSelector';
+import { AdvancedOptions } from './AdvancedOptions';
+import { validateStatement, validateDomainFilter } from '../utils/validation';
 
 export const FactChecker: React.FC = () => {
   const [statement, setStatement] = useState('');
@@ -14,7 +17,7 @@ export const FactChecker: React.FC = () => {
   const [searchAfterDate, setSearchAfterDate] = useState('');
   const [searchBeforeDate, setSearchBeforeDate] = useState('');
   const [searchDomains, setSearchDomains] = useState('');
-  const [searchRecency, setSearchRecency] = useState<'month' | 'week' | 'day' | 'hour'>('month');
+  const [searchRecency, setSearchRecency] = useState<'month' | 'week' | 'day' | 'hour' | undefined>('month');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -28,36 +31,30 @@ export const FactChecker: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!statement.trim()) return;
-
+    
     setLoading(true);
     setError(null);
     setResult(null);
     setThinking('');
 
     try {
-      const domainsArray = searchDomains
-        ? searchDomains.split(',').map(domain => domain.trim()).filter(Boolean)
-        : undefined;
+      // Validate statement
+      validateStatement(statement);
+      
+      // Validate and parse domains
+      const domainsArray = searchDomains ? validateDomainFilter(searchDomains) : undefined;
 
-      const dateFilterOptions = searchAfterDate || searchBeforeDate
-        ? {
-            searchAfterDate: searchAfterDate || undefined,
-            searchBeforeDate: searchBeforeDate || undefined,
-            searchRecency: undefined
-          }
-        : {
-            searchAfterDate: undefined,
-            searchBeforeDate: undefined,
-            searchRecency
-          };
-
-      const response = await factCheckApi.checkFact(statement, {
+      // Simplified date filter logic
+      const options = {
         model,
         searchContextSize,
-        ...dateFilterOptions,
-        searchDomains: domainsArray
-      });
+        searchDomains: domainsArray,
+        searchRecency: (searchAfterDate || searchBeforeDate) ? undefined : searchRecency,
+        searchAfterDate: searchAfterDate || undefined,
+        searchBeforeDate: searchBeforeDate || undefined
+      };
+
+      const response = await factCheckApi.checkFact(statement, options);
 
       setResult(response);
       if (response.thinking) {
@@ -72,434 +69,126 @@ export const FactChecker: React.FC = () => {
     }
   };
 
-  const formatDateForInput = (dateString: string) => {
-    if (!dateString) return '';
-
-    const parts = dateString.split('/');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-    }
-    return dateString;
-  };
-
-  const formatDateForApi = (dateString: string) => {
-    if (!dateString) return '';
-
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      return `${parts[1]}/${parts[2]}/${parts[0]}`;
-    }
-    return dateString;
-  };
-
-  const formatDateObjectForApi = (date: Date): string => {
-    const month = (date.getMonth() + 1).toString();
-    const day = date.getDate().toString();
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
-  };
-
-  const setDateRangePreset = (days: number | null) => {
-    if (days === null) {
-      setSearchRecency(undefined);
-      setSearchAfterDate('');
-      setSearchBeforeDate('');
-    } else if (days === 1) {
-      setSearchRecency('day');
-      setSearchBeforeDate('');
-      setSearchAfterDate('');
-    } else if (days === 7) {
-      setSearchRecency('week');
-      setSearchBeforeDate('');
-      setSearchAfterDate('');
-    } else if (days === 30) {
-      setSearchRecency('month');
-      setSearchBeforeDate('');
-      setSearchAfterDate('');
-    } else {
-      const today = new Date();
-      const beforeDate = today;
-
-      const afterDate = new Date();
-      afterDate.setDate(afterDate.getDate() - days);
-
-      setSearchBeforeDate(formatDateObjectForApi(beforeDate));
-      setSearchAfterDate(formatDateObjectForApi(afterDate));
-      setSearchRecency(undefined);
-    }
-  };
-
-  const handleAfterDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const dateValue = formatDateForApi(e.target.value);
-    setSearchAfterDate(dateValue);
-    if (dateValue) {
-      setSearchRecency('month');
-    }
-  };
-
-  const handleBeforeDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const dateValue = formatDateForApi(e.target.value);
-    setSearchBeforeDate(dateValue);
-    if (dateValue) {
-      setSearchRecency('month');
-    }
-  };
-
-  const clearDateRange = () => {
-    setSearchAfterDate('');
-    setSearchBeforeDate('');
-    setSearchRecency('month');
-  };
-
-  const scrollToSource = (e: React.MouseEvent<HTMLAnchorElement>, sourceId: string) => {
+  const scrollToSource = (e: React.MouseEvent, sourceId: string) => {
     e.preventDefault();
     const element = document.getElementById(sourceId);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      element.classList.add('bg-blue-100', 'dark:bg-blue-900/30');
-      setTimeout(() => {
-        element.classList.remove('bg-blue-100', 'dark:bg-blue-900/30');
-      }, 2000);
+      element.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   return (
-    <div className={`h-full w-full flex ${isDarkMode ? 'dark bg-gray-900' : 'bg-white'}`}>
-      <button
-        onClick={() => setIsDarkMode(!isDarkMode)}
-        className={`fixed top-4 right-4 p-2 rounded-full transition-all duration-200 z-50
-                   ${isDarkMode
-                     ? 'bg-gray-800 hover:bg-gray-700'
-                     : 'bg-gray-100 hover:bg-gray-200 shadow-md'}`}
-        aria-label="Toggle theme"
-      >
-        {isDarkMode ? (
-          <svg className="w-6 h-6 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-          </svg>
-        )}
-      </button>
-
-      <div className={`w-[500px] ${isDarkMode ? 'bg-gray-800' : 'bg-white'} h-full flex flex-col overflow-y-auto pt-16`}>
-        <div className="p-8">
-          <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
-            AI Fact Checker
-          </h1>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+    <div className={`min-h-screen flex ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Left Panel - Input */}
+      <div className={`w-1/2 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg flex flex-col`}>
+        {/* Header */}
+        <div className="p-8 pb-0">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+              AI Fact Checker
+            </h1>
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`p-2 rounded-lg ${
+                isDarkMode 
+                  ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+              } transition-colors duration-200`}
+              aria-label="Toggle dark mode"
+            >
+              {isDarkMode ? (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+              )}
+            </button>
+          </div>
+          <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-8`}>
             Enter any statement and our AI will verify its accuracy using multiple reliable sources
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-8 pt-0">
-          <div className="mb-4">
-            <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
-              Model
-            </label>
-            <div className="flex flex-wrap gap-4">
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  className="form-radio text-blue-500"
-                  name="model"
-                  value="sonar"
-                  checked={model === 'sonar'}
-                  onChange={(e) => setModel(e.target.value as PerplexityModel)}
-                />
-                <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Sonar</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  className="form-radio text-blue-500"
-                  name="model"
-                  value="sonar-pro"
-                  checked={model === 'sonar-pro'}
-                  onChange={(e) => setModel(e.target.value as PerplexityModel)}
-                />
-                <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Sonar Pro</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  className="form-radio text-blue-500"
-                  name="model"
-                  value="sonar-reasoning"
-                  checked={model === 'sonar-reasoning'}
-                  onChange={(e) => setModel(e.target.value as PerplexityModel)}
-                />
-                <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Sonar Reasoning</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  className="form-radio text-blue-500"
-                  name="model"
-                  value="sonar-reasoning-pro"
-                  checked={model === 'sonar-reasoning-pro'}
-                  onChange={(e) => setModel(e.target.value as PerplexityModel)}
-                />
-                <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Sonar Reasoning Pro</span>
-              </label>
-            </div>
-            <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {model.includes('pro') ?
-                'Pro models have a larger context window (200k tokens) and higher output limit (8k tokens)' :
-                'Standard models with 127k token context window'
-              }
-              {model.includes('reasoning') && ' - Includes detailed reasoning and citations'}
-            </p>
-          </div>
+          <ModelSelector 
+            model={model} 
+            onModelChange={setModel} 
+            isDarkMode={isDarkMode} 
+          />
 
           <div className="mb-4">
             <button
               type="button"
               onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-              className={`flex items-center text-sm font-medium ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline`}
+              className={`flex items-center text-sm font-medium ${
+                isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+              } transition-colors duration-200`}
+              aria-label="Toggle advanced options"
             >
-              {showAdvancedOptions ? 'Hide' : 'Show'} Advanced Options
-              <svg
-                className={`ml-1 w-4 h-4 transition-transform ${showAdvancedOptions ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
+              <svg 
+                className={`w-4 h-4 mr-2 transform transition-transform duration-200 ${
+                  showAdvancedOptions ? 'rotate-90' : ''
+                }`} 
+                fill="none" 
+                stroke="currentColor" 
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
               </svg>
+              Advanced Options
             </button>
           </div>
 
           {showAdvancedOptions && (
-            <div className={`mb-4 p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} animate-fade-in`}>
-              <div className="mb-4">
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
-                  Search Context Size
-                </label>
-                <div className="flex flex-wrap gap-4">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      className="form-radio text-blue-500"
-                      name="searchContextSize"
-                      value="low"
-                      checked={searchContextSize === 'low'}
-                      onChange={() => setSearchContextSize('low')}
-                    />
-                    <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Low</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      className="form-radio text-blue-500"
-                      name="searchContextSize"
-                      value="medium"
-                      checked={searchContextSize === 'medium'}
-                      onChange={() => setSearchContextSize('medium')}
-                    />
-                    <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Medium</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      className="form-radio text-blue-500"
-                      name="searchContextSize"
-                      value="high"
-                      checked={searchContextSize === 'high'}
-                      onChange={() => setSearchContextSize('high')}
-                    />
-                    <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>High</span>
-                  </label>
-                </div>
-                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Controls how much search context is retrieved. Higher values provide more comprehensive answers but may cost more.
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
-                  Date Filter
-                </label>
-
-                <div className="flex flex-wrap gap-2 mb-2">
-                  <button
-                    type="button"
-                    onClick={() => setDateRangePreset(null)}
-                    className={`px-2 py-1 text-xs rounded ${
-                      !searchRecency && !searchAfterDate && !searchBeforeDate ?
-                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
-                    }`}
-                  >
-                    No Date Filter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDateRangePreset(1)}
-                    className={`px-2 py-1 text-xs rounded ${
-                      searchRecency === 'day' ?
-                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
-                    }`}
-                  >
-                    Last 24h
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDateRangePreset(7)}
-                    className={`px-2 py-1 text-xs rounded ${
-                      searchRecency === 'week' ?
-                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
-                    }`}
-                  >
-                    Last Week
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDateRangePreset(30)}
-                    className={`px-2 py-1 text-xs rounded ${
-                      searchRecency === 'month' && !searchAfterDate && !searchBeforeDate ?
-                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
-                    }`}
-                  >
-                    Last Month
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDateRangePreset(365)}
-                    className={`px-2 py-1 text-xs rounded ${
-                      searchAfterDate && searchAfterDate.includes((new Date().getFullYear() - 1).toString()) ?
-                        (isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') :
-                        (isDarkMode ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-blue-100 hover:bg-blue-200 text-blue-700')
-                    }`}
-                  >
-                    Last Year
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearDateRange}
-                    className={`px-2 py-1 text-xs rounded ${
-                      isDarkMode
-                        ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                    }`}
-                  >
-                    Clear
-                  </button>
-                </div>
-
-                <div className="mb-2">
-                  <label className={`block text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-1`}>
-                    Custom Date Range
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className={`block text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
-                        After Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formatDateForInput(searchAfterDate)}
-                        onChange={handleAfterDateChange}
-                        className={`w-full p-2 text-sm rounded-md border ${
-                          isDarkMode
-                            ? 'bg-gray-600 border-gray-500 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
-                        Before Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formatDateForInput(searchBeforeDate)}
-                        onChange={handleBeforeDateChange}
-                        className={`w-full p-2 text-sm rounded-md border ${
-                          isDarkMode
-                            ? 'bg-gray-600 border-gray-500 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Either use a preset or set a custom date range to filter search results.
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} mb-2`}>
-                  Domain Filters
-                </label>
-                <input
-                  type="text"
-                  value={searchDomains}
-                  onChange={(e) => setSearchDomains(e.target.value)}
-                  placeholder="e.g., wikipedia.org, -pinterest.com"
-                  className={`w-full p-2 text-sm rounded-md border ${
-                    isDarkMode
-                      ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400'
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-                  }`}
-                />
-                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Comma-separated list of domains to include or exclude (prefix with - to exclude). Example: wikipedia.org, -pinterest.com
-                </p>
-              </div>
-            </div>
+            <AdvancedOptions
+              searchContextSize={searchContextSize}
+              setSearchContextSize={setSearchContextSize}
+              searchAfterDate={searchAfterDate}
+              setSearchAfterDate={setSearchAfterDate}
+              searchBeforeDate={searchBeforeDate}
+              setSearchBeforeDate={setSearchBeforeDate}
+              searchDomains={searchDomains}
+              setSearchDomains={setSearchDomains}
+              searchRecency={searchRecency}
+              setSearchRecency={setSearchRecency}
+              isDarkMode={isDarkMode}
+            />
           )}
 
           <div className="relative flex-1 mb-4">
             <textarea
               value={statement}
               onChange={(e) => setStatement(e.target.value)}
-              className={`w-full h-full p-4 border rounded-lg text-base
-                       ${isDarkMode ?
-                         'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' :
-                         'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                       }
-                       focus:ring-2 focus:ring-blue-400 focus:border-transparent
-                       transition-all duration-200 resize-none scrollbar`}
-              placeholder="Enter a statement to fact check..."
-              disabled={loading}
+              placeholder="Enter a statement to fact-check..."
+              className={`w-full h-32 p-4 text-lg rounded-lg border resize-none ${
+                isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50`}
+              required
+              aria-label="Statement to fact-check"
             />
-            {loading && (
-              <div className={`absolute inset-0 ${isDarkMode ? 'bg-gray-800/80' : 'bg-white/80'} rounded-lg flex items-center justify-center backdrop-blur-sm`}>
-                <div className="flex flex-col items-center space-y-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-500 border-t-transparent"></div>
-                  <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} font-medium`}>Analyzing...</span>
-                </div>
-              </div>
-            )}
           </div>
 
           <button
             type="submit"
             disabled={loading || !statement.trim()}
-            className={`w-full py-3 rounded-lg text-base font-medium
-                     transition-all duration-200
-                     ${loading || !statement.trim()
-                       ? 'opacity-50 cursor-not-allowed bg-gray-400 dark:bg-gray-600'
-                       : isDarkMode
-                         ? 'bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50'
-                         : 'bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50'
-                     }`}
+            className={`w-full py-3 px-6 rounded-lg font-medium text-white transition-all duration-200 ${
+              loading || !statement.trim()
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50'
+            }`}
+            aria-label="Check fact"
           >
             {loading ? 'Analyzing...' : 'Check Fact'}
           </button>
         </form>
       </div>
 
+      {/* Right Panel - Results */}
       <div className={`flex-1 h-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} overflow-y-auto pt-16`}>
         <div className="p-8">
           {error && (
@@ -559,15 +248,13 @@ export const FactChecker: React.FC = () => {
                 <div className="mb-6">
                   <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Explanation</h3>
                   <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {result.explanation.split(/\[(\d+)\]/).map((part, index) => {
+                    {result.explanation.split(/\[(\d+)\]/).map((part: string, index: number) => {
                       if (index % 2 === 0) {
                         return part;
                       } else {
                         const citationId = parseInt(part);
                         const sourceIndex = citationId - 1;
-
-                        // Get the citation URL if available
-                        const citationUrl = result.citations && result.citations.find(c => c.id === citationId)?.url;
+                        const citationUrl = result.citations && result.citations.find((c: any) => c.id === citationId)?.url;
 
                         return (
                           <a
@@ -590,46 +277,46 @@ export const FactChecker: React.FC = () => {
                   <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Sources</h3>
                   <ul className={`list-none pl-0 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                     {result.citations && result.citations.length > 0 ? (
-                      result.citations.map((citation, index) => (
-                        <li
-                          key={index}
-                          id={`source-${index}`}
-                          className="mb-3 p-2 rounded transition-colors duration-300"
-                        >
-                          <div className="flex flex-col">
-                            <div className="flex items-baseline">
-                              <span className="font-medium">[{citation.id}]</span>{' '}
+                      result.citations.map((citation: any, index: number) => (
+                        <li key={index} id={`source-${index}`} className="mb-4 last:mb-0">
+                          <div className="flex items-start">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium mr-3 mt-0.5 ${
+                              isDarkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {citation.id || index + 1}
+                            </span>
+                            <div className="flex-1">
                               <a
                                 href={citation.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="ml-2 hover:underline font-medium"
+                                className={`${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} hover:underline transition-colors duration-200`}
                               >
-                                {citation.title || citation.domain || citation.url}
+                                {citation.title || citation.url}
                               </a>
                             </div>
-                            {citation.domain && (
-                              <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} ml-6`}>
-                                {citation.domain}
-                              </span>
-                            )}
-                            {citation.snippet && (
-                              <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} ml-6 mt-1`}>
-                                {citation.snippet}
-                              </p>
-                            )}
                           </div>
+                          {citation.domain && (
+                            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} ml-9`}>
+                              {citation.domain}
+                            </span>
+                          )}
+                          {citation.snippet && (
+                            <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} ml-9 mt-1`}>
+                              {citation.snippet}
+                            </p>
+                          )}
                         </li>
                       ))
                     ) : (
-                      result.sources.map((source, index) => (
-                        <li
-                          key={index}
-                          id={`source-${index}`}
-                          className="mb-2 p-2 rounded transition-colors duration-300"
-                        >
-                          <span className="font-medium">[{index + 1}]</span>{' '}
-                          <a href={source} target="_blank" rel="noopener noreferrer" className="hover:underline break-all">
+                      result.sources?.map((source: string, index: number) => (
+                        <li key={index} id={`source-${index}`} className="mb-2 last:mb-0">
+                          <a
+                            href={source}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} hover:underline transition-colors duration-200`}
+                          >
                             {source}
                           </a>
                         </li>
@@ -642,30 +329,7 @@ export const FactChecker: React.FC = () => {
                   <div>
                     <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Analysis Process</h3>
                     <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} whitespace-pre-wrap ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      {thinking.split(/\[(\d+)\]/).map((part, index) => {
-                        if (index % 2 === 0) {
-                          return part;
-                        } else {
-                          const citationId = parseInt(part);
-                          const sourceIndex = citationId - 1;
-
-                          // Get the citation URL if available
-                          const citationUrl = result.citations && result.citations.find(c => c.id === citationId)?.url;
-
-                          return (
-                            <a
-                              key={index}
-                              href={citationUrl ? citationUrl : `#source-${sourceIndex}`}
-                              onClick={citationUrl ? undefined : (e) => scrollToSource(e, `source-${sourceIndex}`)}
-                              target={citationUrl ? "_blank" : undefined}
-                              rel={citationUrl ? "noopener noreferrer" : undefined}
-                              className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline transition-colors duration-200`}
-                            >
-                              [{part}]
-                            </a>
-                          );
-                        }
-                      })}
+                      {thinking}
                     </div>
                   </div>
                 )}
@@ -698,8 +362,8 @@ export const FactChecker: React.FC = () => {
               <svg className="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-lg font-medium">Enter a statement to check its factual accuracy</p>
-              <p className="text-sm mt-2">Our AI will analyze it using multiple reliable sources</p>
+              <p className="text-lg font-medium">Ready to fact-check</p>
+              <p className="text-sm mt-2">Enter a statement to get started</p>
             </div>
           )}
         </div>

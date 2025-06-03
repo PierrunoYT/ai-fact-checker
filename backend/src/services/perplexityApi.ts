@@ -1,43 +1,12 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { CONFIG, type PerplexityModel } from '../config/constants';
+import { logger } from '../utils/logger';
+import { sanitizeContent } from '../utils/validation';
 
 dotenv.config();
 
-// Constants and Configuration
-const CONFIG = {
-  API_URL: 'https://api.perplexity.ai/chat/completions',
-  DEFAULT_MODEL: 'sonar' as const,
-  DEFAULT_TEMPERATURE: 0.2,
-  DEFAULT_TOP_P: 0.9,
-  DEFAULT_FREQUENCY_PENALTY: 1,
-  DEFAULT_PRESENCE_PENALTY: 0,
-  DEFAULT_TOP_K: 0,
-  MODELS: {
-    'sonar': {
-      maxTokens: 4000,
-      contextLength: 127000,
-      hasReasoning: false
-    },
-    'sonar-pro': {
-      maxTokens: 8000,
-      contextLength: 200000,
-      hasReasoning: false
-    },
-    'sonar-reasoning': {
-      maxTokens: 4000,
-      contextLength: 127000,
-      hasReasoning: true
-    },
-    'sonar-reasoning-pro': {
-      maxTokens: 8000,
-      contextLength: 127000,
-      hasReasoning: true
-    }
-  } as const
-};
-
-// Types
-type PerplexityModel = keyof typeof CONFIG.MODELS;
+// Remove duplicate type definition since it's imported from constants
 
 interface PerplexityMessage {
   role: 'system' | 'user' | 'assistant';
@@ -156,12 +125,7 @@ interface StreamHandler {
   onError?: (error: Error) => void;
 }
 
-// Add logging utility
-const log = {
-  info: (...args: any[]) => console.log('\x1b[36m%s\x1b[0m', '[Perplexity API]', ...args),
-  error: (...args: any[]) => console.error('\x1b[31m%s\x1b[0m', '[Perplexity API Error]', ...args),
-  debug: (...args: any[]) => console.debug('\x1b[35m%s\x1b[0m', '[Perplexity API Debug]', ...args)
-};
+// Use centralized logger instead of custom logging
 
 // Helper Functions
 const createSystemPrompt = (): string => `You are a fact-checking AI assistant.
@@ -173,16 +137,23 @@ Rules:
 4. Always cite sources to support your analysis
 5. Be precise and concise in your explanations`;
 
+/**
+ * Creates a Perplexity API request configuration
+ * @param statement - The statement to fact-check
+ * @param options - Configuration options
+ * @param stream - Whether to use streaming
+ * @returns Configured request options
+ */
 const createPerplexityRequest = (
   statement: string,
   options: FactCheckOptions,
   stream: boolean
 ): PerplexityRequestOptions => {
-  const model = options.model || CONFIG.DEFAULT_MODEL;
+  const model = options.model || CONFIG.DEFAULTS.MODEL;
   const modelConfig = CONFIG.MODELS[model];
 
-  log.info(`Creating request for model: ${model}, stream: ${stream}`);
-  log.debug('Request options:', options);
+  logger.info(`Creating request for model: ${model}, stream: ${stream}`);
+  logger.debug('Request options:', options);
 
   return {
     model,
@@ -207,12 +178,12 @@ Respond ONLY with the JSON object, no markdown or other formatting.`
       },
       { role: 'user', content: statement }
     ],
-    temperature: options.temperature ?? CONFIG.DEFAULT_TEMPERATURE,
+    temperature: options.temperature ?? CONFIG.DEFAULTS.TEMPERATURE,
     max_tokens: options.maxTokens ?? modelConfig.maxTokens,
-    top_p: options.topP ?? CONFIG.DEFAULT_TOP_P,
-    top_k: options.topK ?? CONFIG.DEFAULT_TOP_K,
-    frequency_penalty: options.frequencyPenalty ?? CONFIG.DEFAULT_FREQUENCY_PENALTY,
-    presence_penalty: options.presencePenalty ?? CONFIG.DEFAULT_PRESENCE_PENALTY,
+    top_p: options.topP ?? CONFIG.DEFAULTS.TOP_P,
+    top_k: options.topK ?? CONFIG.DEFAULTS.TOP_K,
+    frequency_penalty: options.frequencyPenalty ?? CONFIG.DEFAULTS.FREQUENCY_PENALTY,
+    presence_penalty: options.presencePenalty ?? CONFIG.DEFAULTS.PRESENCE_PENALTY,
     stream,
     search_domain_filter: options.searchDomains,
     search_recency_filter: options.searchRecency,
@@ -226,17 +197,23 @@ Respond ONLY with the JSON object, no markdown or other formatting.`
   };
 };
 
-// Main Function
+/**
+ * Main function to check facts using Perplexity AI
+ * @param statement - The statement to fact-check
+ * @param options - Configuration options
+ * @param streamHandler - Optional streaming handler
+ * @returns Promise resolving to fact-check result
+ */
 export async function checkFactWithPerplexity(
   statement: string,
   options: FactCheckOptions = {},
   streamHandler?: StreamHandler
 ): Promise<FactCheckResult> {
-  log.info(`Starting fact check for statement: "${statement.slice(0, 100)}${statement.length > 100 ? '...' : ''}"`);
-  log.debug('Options:', options);
+  logger.info(`Starting fact check for statement: "${statement.slice(0, 100)}${statement.length > 100 ? '...' : ''}"`);
+  logger.debug('Options:', options);
 
   if (!process.env.PERPLEXITY_API_KEY) {
-    log.error('API key not configured');
+    logger.error('API key not configured');
     throw new Error('Perplexity API key is not configured');
   }
 
@@ -251,7 +228,7 @@ export async function checkFactWithPerplexity(
       : await handleNormalRequest(statement, options, headers);
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      log.error('API Request Failed:', {
+      logger.error('API Request Failed:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
@@ -282,21 +259,23 @@ export async function checkFactWithPerplexity(
   }
 }
 
-// Request Handlers
+/**
+ * Handles normal (non-streaming) API requests
+ */
 async function handleNormalRequest(
   statement: string,
   options: FactCheckOptions,
   headers: Record<string, string>
 ): Promise<FactCheckResult> {
-  log.info('Making normal (non-streaming) request');
+  logger.info('Making normal (non-streaming) request');
 
   const response = await axios.post(
-    CONFIG.API_URL,
+    CONFIG.PERPLEXITY_API_URL,
     createPerplexityRequest(statement, options, false),
-    { headers }
+    { headers, timeout: CONFIG.REQUEST_TIMEOUT }
   );
 
-  log.debug('Received response:', {
+  logger.debug('Received response:', {
     status: response.status,
     headers: response.headers,
     data: response.data
@@ -304,14 +283,14 @@ async function handleNormalRequest(
 
   const content = response.data.choices[0]?.message?.content;
   if (!content) {
-    log.error('No content in response:', response.data);
+    logger.error('No content in response:', response.data);
     throw new Error('No content in response');
   }
 
   try {
-    // Sanitize the content by removing control characters
-    const sanitizedContent = content.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-    log.debug('Attempting to parse sanitized content:', sanitizedContent);
+    // Use improved sanitization
+    const sanitizedContent = sanitizeContent(content);
+    logger.debug('Attempting to parse sanitized content:', sanitizedContent);
     const result = JSON.parse(sanitizedContent);
 
     // Ensure thinking process is included
@@ -347,18 +326,18 @@ async function handleNormalRequest(
       }
     };
   } catch (error) {
-    log.debug('Direct parsing failed, attempting to extract JSON from markdown');
+    logger.debug('Direct parsing failed, attempting to extract JSON from markdown');
     const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      log.error('Failed to parse response:', content);
+      logger.error('Failed to parse response:', content);
       throw new Error('Invalid response format from Perplexity API');
     }
 
     try {
       const jsonContent = jsonMatch[1] || jsonMatch[0];
-      // Sanitize the extracted JSON content
-      const sanitizedJsonContent = jsonContent.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-      log.debug('Extracted and sanitized JSON content:', sanitizedJsonContent);
+      // Use improved sanitization
+      const sanitizedJsonContent = sanitizeContent(jsonContent);
+      logger.debug('Extracted and sanitized JSON content:', sanitizedJsonContent);
       const result = JSON.parse(sanitizedJsonContent);
 
       // Ensure thinking process is included
@@ -398,22 +377,25 @@ async function handleNormalRequest(
         }
       };
     } catch (parseError) {
-      log.error('Error parsing extracted JSON:', parseError);
+      logger.error('Error parsing extracted JSON:', parseError);
       throw new Error('Failed to parse fact-checking result');
     }
   }
 }
 
+/**
+ * Handles streaming API requests
+ */
 async function handleStreamingRequest(
   statement: string,
   options: FactCheckOptions,
   headers: Record<string, string>,
   streamHandler: StreamHandler
 ): Promise<FactCheckResult> {
-  log.info('Making streaming request');
+  logger.info('Making streaming request');
 
   const response = await axios.post<NodeJS.ReadableStream>(
-    CONFIG.API_URL,
+    CONFIG.PERPLEXITY_API_URL,
     createPerplexityRequest(statement, options, true),
     {
       headers: { ...headers, 'Accept': 'text/event-stream' },
@@ -421,7 +403,7 @@ async function handleStreamingRequest(
     }
   );
 
-  log.debug('Stream response received, setting up handlers');
+  logger.debug('Stream response received, setting up handlers');
 
   return new Promise<FactCheckResult>((resolve, reject) => {
     let buffer = '';
@@ -453,7 +435,7 @@ async function handleStreamingRequest(
 
         const data = line.slice(6);
         if (data === '[DONE]') {
-          log.info('Stream completed');
+          logger.info('Stream completed');
           if (result) {
             resolve(result);
           } else if (jsonBuffer) {
@@ -501,11 +483,11 @@ async function handleStreamingRequest(
               isCollectingJson = false;
               jsonBuffer = '';
               buffer = '';
-              log.debug('Successfully parsed JSON from stream');
+              logger.debug('Successfully parsed JSON from stream');
             }
           }
         } catch (error) {
-          log.debug('Error processing stream chunk, continuing collection');
+          logger.debug('Error processing stream chunk, continuing collection');
         }
       }
     };
@@ -513,7 +495,7 @@ async function handleStreamingRequest(
     response.data
       .on('data', handleStreamData)
       .on('end', () => {
-        log.info('Stream ended');
+        logger.info('Stream ended');
         if (result) {
           resolve(result);
         } else if (jsonBuffer) {
@@ -524,18 +506,21 @@ async function handleStreamingRequest(
             reject(new Error('Failed to parse final result'));
           }
         } else {
-          log.error('Stream ended without valid result');
+          logger.error('Stream ended without valid result');
           reject(new Error('Stream ended without valid result'));
         }
       })
       .on('error', (error) => {
-        log.error('Stream error:', error);
+        logger.error('Stream error:', error);
         reject(error);
       });
   });
 }
 
-// Health check function
+/**
+ * Health check function for Perplexity API
+ * @returns Promise resolving to boolean indicating API health
+ */
 export async function checkPerplexityApiHealth(): Promise<boolean> {
   if (!process.env.PERPLEXITY_API_KEY) {
     throw new Error('Perplexity API key is not configured');
@@ -543,9 +528,9 @@ export async function checkPerplexityApiHealth(): Promise<boolean> {
 
   try {
     const response = await axios.post(
-      CONFIG.API_URL,
+      CONFIG.PERPLEXITY_API_URL,
       {
-        model: CONFIG.DEFAULT_MODEL,
+        model: CONFIG.DEFAULTS.MODEL,
         messages: [
           { role: 'user', content: 'test' }
         ],
@@ -555,13 +540,14 @@ export async function checkPerplexityApiHealth(): Promise<boolean> {
         headers: {
           'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: CONFIG.REQUEST_TIMEOUT
       }
     );
     return response.status === 200;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.error('Perplexity API Health Check Error:', {
+      logger.error('Perplexity API Health Check Error:', {
         status: error.response?.status,
         message: error.response?.data?.error || error.message
       });

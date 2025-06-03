@@ -2,25 +2,41 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { checkFactWithPerplexity, checkPerplexityApiHealth } from './services/perplexityApi';
+import { CONFIG } from './config/constants';
+import { logger } from './utils/logger';
+import {
+  validateStatement,
+  validateModel,
+  validateSearchDomains,
+  validateSearchRecency,
+  validateSearchContextSize,
+  validateDateFormat,
+  ValidationError
+} from './utils/validation';
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = CONFIG.SERVER.PORT;
 
-// CORS configuration
+// CORS configuration with improved security
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: CONFIG.SERVER.CORS_ORIGINS,
   credentials: true,
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200 // For legacy browser support
 };
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.logRequest(req.method, req.path, req.get('User-Agent'));
+  next();
+});
 
 // Types
 interface FactCheckRequest {
@@ -69,12 +85,23 @@ const errorHandler = (
   res: express.Response,
   next: express.NextFunction
 ) => {
-  console.error('Error:', err);
+  logger.logError(err, {
+    method: req.method,
+    path: req.path,
+    body: req.body
+  });
 
   if (err instanceof ApiError) {
     return res.status(err.statusCode).json({
       error: err.message,
       details: err.details
+    });
+  }
+
+  if (err instanceof ValidationError) {
+    return res.status(400).json({
+      error: err.message,
+      field: err.field
     });
   }
 
@@ -84,36 +111,49 @@ const errorHandler = (
   });
 };
 
-// Validation middleware
+// Enhanced validation middleware
 const validateFactCheckRequest = (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) => {
-  const { statement, model } = req.body as FactCheckRequest;
+  try {
+    const {
+      statement,
+      model,
+      searchDomains,
+      searchRecency,
+      searchAfterDate,
+      searchBeforeDate,
+      searchContextSize
+    } = req.body as FactCheckRequest;
 
-  if (!statement?.trim()) {
-    throw new ApiError(400, 'Statement is required');
+    // Validate all fields
+    validateStatement(statement);
+    validateModel(model);
+    validateSearchDomains(searchDomains);
+    validateSearchRecency(searchRecency);
+    validateSearchContextSize(searchContextSize);
+    validateDateFormat(searchAfterDate, 'searchAfterDate');
+    validateDateFormat(searchBeforeDate, 'searchBeforeDate');
+
+    if (!process.env.PERPLEXITY_API_KEY) {
+      throw new ApiError(500, 'Server configuration error', 'Perplexity API key is not configured');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
-
-  if (model && !['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro'].includes(model)) {
-    throw new ApiError(400, 'Invalid model specified');
-  }
-
-  if (!process.env.PERPLEXITY_API_KEY) {
-    throw new ApiError(500, 'Server configuration error', 'Perplexity API key is not configured');
-  }
-
-  next();
 };
 
 // Routes
 app.post('/api/check-fact', validateFactCheckRequest, async (req, res) => {
   let hasResponded = false;
-  
-  // Set a longer timeout for this route
-  req.setTimeout(120000); // 2 minutes
-  res.setTimeout(120000); // 2 minutes
+
+  // Set timeout from configuration
+  req.setTimeout(CONFIG.REQUEST_TIMEOUT);
+  res.setTimeout(CONFIG.REQUEST_TIMEOUT);
 
   try {
     const { 
@@ -237,6 +277,6 @@ app.get('/health', async (req, res) => {
 app.use(errorHandler);
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-  console.log(`API key configured: ${!!process.env.PERPLEXITY_API_KEY}`);
+  logger.info(`Server is running on port ${port}`);
+  logger.logApiKeyStatus(!!process.env.PERPLEXITY_API_KEY);
 });

@@ -1,14 +1,12 @@
-import axios, { AxiosError } from 'axios';
-
-// Constants
-const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
-  timeout: 120000, // 2 minutes
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-} as const;
+import { apiClient } from './apiClient';
+import type {
+  FactCheckResponse as ImportedFactCheckResponse,
+  FactCheckRequest,
+  PerplexityModel as ImportedPerplexityModel,
+  SearchRecency as ImportedSearchRecency,
+  SearchContextSize as ImportedSearchContextSize,
+  Citation as ImportedCitation
+} from '../types';
 
 // Logging utility with proper types
 const log = {
@@ -17,30 +15,12 @@ const log = {
   debug: (...args: unknown[]) => console.log('%c[Fact Checker Debug]', 'color: #8b5cf6', ...args)
 };
 
-// Types
-export type PerplexityModel = 'sonar' | 'sonar-pro' | 'sonar-reasoning' | 'sonar-reasoning-pro';
-
-export interface Citation {
-  id: number;
-  url: string;
-  title?: string;
-  domain?: string;
-  snippet?: string;
-}
-
-export interface FactCheckResponse {
-  isFactual: boolean;
-  confidence: number;
-  explanation: string;
-  sources: string[];
-  thinking?: string;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-  citations?: Citation[];
-}
+// Re-export types for backward compatibility
+export type PerplexityModel = ImportedPerplexityModel;
+export type SearchRecency = ImportedSearchRecency;
+export type SearchContextSize = ImportedSearchContextSize;
+export type Citation = ImportedCitation;
+export type FactCheckResponse = ImportedFactCheckResponse;
 
 export interface FactCheckOptions {
   model?: PerplexityModel;
@@ -61,60 +41,8 @@ export interface FactCheckOptions {
   stream?: boolean;
 }
 
-// API Client
-const apiClient = axios.create(API_CONFIG);
-
-// Error Handler
-const handleApiError = (error: unknown): never => {
-  if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ error?: string; details?: string }>;
-
-    // Log the full error details
-    log.error('API Request Failed:', {
-      code: axiosError.code,
-      message: axiosError.message,
-      status: axiosError.response?.status,
-      statusText: axiosError.response?.statusText,
-      data: axiosError.response?.data,
-      config: {
-        url: axiosError.config?.url,
-        method: axiosError.config?.method,
-        data: axiosError.config?.data,
-        headers: axiosError.config?.headers
-      }
-    });
-
-    // Handle timeout specifically
-    if (axiosError.code === 'ECONNABORTED') {
-      throw new Error('Request timed out. The fact-checking process is taking longer than expected. Please try again.');
-    }
-
-    const errorMessage = axiosError.response?.data?.error ||
-                        axiosError.response?.data?.details ||
-                        axiosError.message;
-
-    switch (axiosError.response?.status) {
-      case 400:
-        throw new Error(`Invalid request: ${errorMessage}`);
-      case 401:
-        throw new Error('Authentication required. Please check your credentials.');
-      case 403:
-        throw new Error('Access denied. Please check your permissions.');
-      case 404:
-        throw new Error('Service not found. Please check the API configuration.');
-      case 429:
-        throw new Error('Rate limit exceeded. Please try again later.');
-      case 500:
-        throw new Error('Server error. Please try again later.');
-      case 504:
-        throw new Error('Gateway timeout. The fact-checking process took too long. Please try again.');
-      default:
-        throw new Error(`Error: ${errorMessage}`);
-    }
-  }
-  log.error('Non-Axios Error:', error);
-  throw error instanceof Error ? error : new Error('An unexpected error occurred');
-};
+// Set the API client base URL
+apiClient.setBaseURL(import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
 
 // API Methods
 export const factCheckApi = {
@@ -171,14 +99,13 @@ export const factCheckApi = {
         returnRelatedQuestions,
         stream,
         ...dateParams
-      }, {
-        timeout: 120000 // 2 minutes timeout for fact checking
       });
 
-      log.debug('Response received:', response.data);
-      return response.data;
+      log.debug('Response received:', response);
+      return response;
     } catch (error) {
-      throw handleApiError(error);
+      log.error('Fact check error:', error);
+      throw error;
     }
   },
 

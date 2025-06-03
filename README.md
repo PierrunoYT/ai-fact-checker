@@ -132,18 +132,64 @@ GET /health
 
 ## 🔧 Development
 
+### Project Structure
 ```
-truth-check/
-├── frontend/          # React application
-│   ├── src/
-│   │   ├── components/
-│   │   ├── api/
-│   │   └── ...
-├── backend/           # Express server
-│   ├── src/
-│   │   ├── services/
-│   │   └── ...
+ai-fact-checker/
+├── 📁 backend/                 # Express.js API server
+│   ├── 📁 src/
+│   │   ├── 📁 config/         # Configuration constants
+│   │   ├── 📁 services/       # Business logic services
+│   │   ├── 📁 utils/          # Utility functions & validation
+│   │   └── 📄 server.ts       # Main server file
+│   ├── 📄 .env.example        # Environment template
+│   └── 📄 package.json
+├── 📁 frontend/               # React + TypeScript frontend
+│   ├── 📁 src/
+│   │   ├── 📁 api/           # API client with retry logic
+│   │   ├── 📁 components/    # Reusable React components
+│   │   ├── 📁 hooks/         # Custom React hooks
+│   │   ├── 📁 types/         # TypeScript definitions
+│   │   ├── 📁 utils/         # Frontend utilities
+│   │   └── 📄 App.tsx        # Main application
+│   ├── 📄 .env.example       # Environment template
+│   └── 📄 package.json
+├── 📄 start-dev.js           # Development launcher
+├── 📄 DEVELOPMENT.md         # Development guide
+├── 📄 CODE_ISSUES_REPORT.md  # Code quality report
+└── 📄 package.json           # Root configuration
 ```
+
+### Available Scripts
+```bash
+# Development
+npm run dev              # Start both servers
+npm run build           # Build for production
+npm run test            # Run all tests
+npm run lint            # Lint all code
+npm run format          # Format all code
+
+# Frontend only
+cd frontend
+npm run dev             # Start frontend dev server
+npm run build           # Build frontend
+npm run test            # Run frontend tests
+npm run preview         # Preview production build
+
+# Backend only
+cd backend
+npm run dev             # Start backend dev server
+npm run build           # Build backend
+npm run test            # Run backend tests
+npm run start           # Start production server
+```
+
+### Code Quality
+- ✅ **TypeScript**: Strict type checking enabled
+- ✅ **ESLint**: Code linting with custom rules
+- ✅ **Prettier**: Consistent code formatting
+- ✅ **Testing**: Comprehensive test coverage
+- ✅ **Error Boundaries**: Graceful error handling
+- ✅ **Input Validation**: Client and server-side validation
 
 ## ❗ Troubleshooting
 
