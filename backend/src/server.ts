@@ -29,7 +29,10 @@ const corsOptions = {
 };
 
 // Middleware
-app.use(cors(corsOptions));
+app.use(cors({
+  ...corsOptions,
+  origin: CONFIG.SERVER.CORS_ORIGINS.filter(Boolean) as string[]
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // Request logging middleware
@@ -280,3 +283,4 @@ app.listen(port, () => {
   logger.info(`Server is running on port ${port}`);
   logger.logApiKeyStatus(!!process.env.PERPLEXITY_API_KEY);
 });
+
