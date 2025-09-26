@@ -179,8 +179,10 @@ export const FactCheckSkeleton: React.FC<{ isDarkMode: boolean }> = ({ isDarkMod
  * Skeleton for form inputs
  */
 export const FormSkeleton: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
+  const containerClasses = `space-y-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`;
+
   return (
-    <div className="space-y-4">
+    <div className={containerClasses}>
       {/* Model selector */}
       <div>
         <Skeleton width="15%" height={16} className="mb-2" />

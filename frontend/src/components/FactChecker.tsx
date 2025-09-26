@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { factCheckApi, type FactCheckResponse, type PerplexityModel } from '../api/perplexityApi';
+import { factCheckApi, type Citation, type FactCheckResponse, type PerplexityModel } from '../api/perplexityApi';
 import { ModelSelector } from './ModelSelector';
 import { AdvancedOptions } from './AdvancedOptions';
 import { validateStatement, validateDomainFilter } from '../utils/validation';
@@ -251,24 +251,29 @@ export const FactChecker: React.FC = () => {
                     {result.explanation.split(/\[(\d+)\]/).map((part: string, index: number) => {
                       if (index % 2 === 0) {
                         return part;
-                      } else {
-                        const citationId = parseInt(part);
-                        const sourceIndex = citationId - 1;
-                        const citationUrl = result.citations && result.citations.find((c: any) => c.id === citationId)?.url;
-
-                        return (
-                          <a
-                            key={index}
-                            href={citationUrl ? citationUrl : `#source-${sourceIndex}`}
-                            onClick={citationUrl ? undefined : (e) => scrollToSource(e, `source-${sourceIndex}`)}
-                            target={citationUrl ? "_blank" : undefined}
-                            rel={citationUrl ? "noopener noreferrer" : undefined}
-                            className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline transition-colors duration-200`}
-                          >
-                            [{part}]
-                          </a>
-                        );
                       }
+
+                      const citationId = Number(part);
+                      if (Number.isNaN(citationId)) {
+                        return part;
+                      }
+
+                      const sourceIndex = citationId - 1;
+                      const citation = result.citations?.find((c) => c.id === citationId);
+                      const citationUrl = citation?.url;
+
+                      return (
+                        <a
+                          key={index}
+                          href={citationUrl ? citationUrl : `#source-${sourceIndex}`}
+                          onClick={citationUrl ? undefined : (e) => scrollToSource(e, `source-${sourceIndex}`)}
+                          target={citationUrl ? '_blank' : undefined}
+                          rel={citationUrl ? 'noopener noreferrer' : undefined}
+                          className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline transition-colors duration-200`}
+                        >
+                          [{part}]
+                        </a>
+                      );
                     })}
                   </p>
                 </div>
@@ -277,7 +282,7 @@ export const FactChecker: React.FC = () => {
                   <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Sources</h3>
                   <ul className={`list-none pl-0 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                     {result.citations && result.citations.length > 0 ? (
-                      result.citations.map((citation: any, index: number) => (
+                      result.citations.map((citation: Citation, index: number) => (
                         <li key={index} id={`source-${index}`} className="mb-4 last:mb-0">
                           <div className="flex items-start">
                             <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium mr-3 mt-0.5 ${

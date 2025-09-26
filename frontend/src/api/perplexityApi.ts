@@ -1,7 +1,6 @@
 import { apiClient } from './apiClient';
 import type {
   FactCheckResponse as ImportedFactCheckResponse,
-  FactCheckRequest,
   PerplexityModel as ImportedPerplexityModel,
   SearchRecency as ImportedSearchRecency,
   SearchContextSize as ImportedSearchContextSize,
@@ -31,15 +30,88 @@ export interface FactCheckOptions {
   topK?: number;
   topP?: number;
   searchDomains?: string[];
-  searchRecency?: 'month' | 'week' | 'day' | 'hour';
+  searchRecency?: SearchRecency;
   searchAfterDate?: string; // MM/DD/YYYY format
   searchBeforeDate?: string; // MM/DD/YYYY format
-  searchContextSize?: 'low' | 'medium' | 'high';
+  searchContextSize?: SearchContextSize;
   returnImages?: boolean;
   returnRelatedQuestions?: boolean;
   onThinking?: (thinking: string) => void;
   stream?: boolean;
 }
+
+const STREAM_TIMEOUT_MS = 120000;
+
+const buildRequestPayload = (statement: string, options: FactCheckOptions): Record<string, unknown> => {
+  const payload: Record<string, unknown> = { statement };
+
+  const assignIfDefined = <T>(key: string, value: T | undefined) => {
+    if (value !== undefined) {
+      payload[key] = value;
+    }
+  };
+
+  assignIfDefined('model', options.model);
+  assignIfDefined('maxTokens', options.maxTokens);
+  assignIfDefined('temperature', options.temperature);
+  assignIfDefined('frequencyPenalty', options.frequencyPenalty);
+  assignIfDefined('presencePenalty', options.presencePenalty);
+  assignIfDefined('topK', options.topK);
+  assignIfDefined('topP', options.topP);
+
+  if (options.searchDomains && options.searchDomains.length > 0) {
+    payload.searchDomains = options.searchDomains;
+  }
+
+  assignIfDefined('searchRecency', options.searchRecency);
+  assignIfDefined('searchAfterDate', options.searchAfterDate);
+  assignIfDefined('searchBeforeDate', options.searchBeforeDate);
+  assignIfDefined('searchContextSize', options.searchContextSize);
+  assignIfDefined('returnImages', options.returnImages);
+  assignIfDefined('returnRelatedQuestions', options.returnRelatedQuestions);
+
+  return payload;
+};
+
+const resolveBaseUrl = (): string => {
+  const configured = apiClient.getBaseURL();
+  const fallback = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  return (configured || fallback).replace(/\/$/, '');
+};
+
+const parseStreamChunk = (
+  rawMessage: string,
+  onThinking?: (thinking: string) => void
+): FactCheckResponse | null => {
+  const trimmed = rawMessage.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const dataLines = trimmed
+    .split('\n')
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.replace(/^data:\s*/, ''));
+
+  const candidate = dataLines.length > 0 ? dataLines.join('') : trimmed;
+
+  try {
+    const parsed = JSON.parse(candidate) as { type?: string; content?: unknown };
+
+    if (parsed.type === 'thinking' && typeof parsed.content === 'string') {
+      onThinking?.(parsed.content);
+      return null;
+    }
+
+    if (parsed.type === 'result' && parsed.content) {
+      return parsed.content as FactCheckResponse;
+    }
+  } catch (error) {
+    log.debug('Error parsing stream message:', error, candidate);
+  }
+
+  return null;
+};
 
 // Set the API client base URL
 apiClient.setBaseURL(import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
@@ -54,52 +126,10 @@ export const factCheckApi = {
     log.debug('Options:', options);
 
     try {
-      const {
-        model,
-        maxTokens,
-        temperature,
-        frequencyPenalty,
-        presencePenalty,
-        topK,
-        topP,
-        searchDomains,
-        searchRecency,
-        searchAfterDate,
-        searchBeforeDate,
-        searchContextSize,
-        returnImages,
-        returnRelatedQuestions,
-        stream = false
-      } = options;
+      const payload = buildRequestPayload(statement, options);
+      payload.stream = Boolean(options.stream);
 
-      // Only include date-related parameters if they are defined
-      const dateParams = {};
-      if (searchRecency) {
-        dateParams['searchRecency'] = searchRecency;
-      }
-      if (searchAfterDate) {
-        dateParams['searchAfterDate'] = searchAfterDate;
-      }
-      if (searchBeforeDate) {
-        dateParams['searchBeforeDate'] = searchBeforeDate;
-      }
-
-      const response = await apiClient.post<FactCheckResponse>('/check-fact', {
-        statement,
-        model,
-        maxTokens,
-        temperature,
-        frequencyPenalty,
-        presencePenalty,
-        topK,
-        topP,
-        searchDomains,
-        searchContextSize,
-        returnImages,
-        returnRelatedQuestions,
-        stream,
-        ...dateParams
-      });
+      const response = await apiClient.post<FactCheckResponse>('/check-fact', payload);
 
       log.debug('Response received:', response);
       return response;
@@ -117,95 +147,113 @@ export const factCheckApi = {
     log.debug('Stream options:', options);
 
     try {
-      const {
-        model,
-        maxTokens,
-        temperature,
-        frequencyPenalty,
-        presencePenalty,
-        topK,
-        topP,
-        searchDomains,
-        searchRecency,
-        searchAfterDate,
-        searchBeforeDate,
-        searchContextSize,
-        returnImages,
-        returnRelatedQuestions,
-        onThinking
-      } = options;
+      const payload = buildRequestPayload(statement, options);
+      payload.stream = true;
 
-      const response = await apiClient.post('/check-fact', {
-        statement,
-        model,
-        maxTokens,
-        temperature,
-        frequencyPenalty,
-        presencePenalty,
-        topK,
-        topP,
-        searchDomains,
-        searchContextSize,
-        returnImages,
-        returnRelatedQuestions,
-        stream: true
-      }, {
-        responseType: 'stream',
+      const baseUrl = resolveBaseUrl();
+      const endpoint = `${baseUrl}/check-fact`;
+      const controller = new AbortController();
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
         headers: {
-          ...API_CONFIG.headers,
-          'Accept': 'text/event-stream',
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream'
         },
-        timeout: 120000 // 2 minutes timeout for streaming
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
 
-      log.debug('Stream response received, setting up handlers');
+      if (!response.ok) {
+        throw new Error(`Streaming request failed with status ${response.status}`);
+      }
 
-      return new Promise((resolve, reject) => {
+      if (!response.body) {
+        throw new Error('Streaming is not supported in this environment.');
+      }
+
+      const reader = response.body.getReader();
+      const textDecoder = new TextDecoder();
+      const { onThinking } = options;
+
+      return await new Promise<FactCheckResponse>((resolve, reject) => {
+        let buffer = '';
         let result: FactCheckResponse | null = null;
 
-        // Set a timeout for the entire stream
         const streamTimeout = setTimeout(() => {
-          log.error('Stream timeout reached');
+          controller.abort();
           reject(new Error('Stream timed out. The fact-checking process took too long. Please try again.'));
-        }, 120000);
+        }, STREAM_TIMEOUT_MS);
 
-        response.data.on('data', (chunk: Uint8Array) => {
-          try {
-            const data = JSON.parse(chunk.toString());
-            log.debug('Stream chunk received:', data);
-
-            if (data.type === 'thinking' && onThinking) {
-              log.debug('Thinking update:', data.content);
-              onThinking(data.content);
-            } else if (data.type === 'result') {
-              log.debug('Result received:', data.content);
-              result = data.content;
-            }
-          } catch (error) {
-            log.debug('Error parsing stream chunk:', error);
-            // Ignore parse errors for partial chunks
-          }
-        });
-
-        response.data.on('end', () => {
-          log.info('Stream ended');
+        const cleanup = () => {
           clearTimeout(streamTimeout);
-          if (result) {
-            resolve(result);
-          } else {
-            log.error('Stream ended without result');
-            reject(new Error('Stream ended without result'));
-          }
-        });
+        };
 
-        response.data.on('error', (error: Error) => {
-          log.error('Stream error:', error);
-          clearTimeout(streamTimeout);
+        const handleResolve = (value: FactCheckResponse) => {
+          cleanup();
+          resolve(value);
+        };
+
+        const handleReject = (error: Error) => {
+          cleanup();
           reject(error);
-        });
+        };
+
+        const processBuffer = () => {
+          const events = buffer.split('\n\n');
+          buffer = events.pop() ?? '';
+
+          for (const event of events) {
+            const parsedResult = parseStreamChunk(event, onThinking);
+            if (parsedResult) {
+              result = parsedResult;
+            }
+          }
+        };
+
+        const read = () => {
+          reader
+            .read()
+            .then(({ done, value }) => {
+              if (done) {
+                log.info('Stream ended');
+                if (buffer) {
+                  const parsedResult = parseStreamChunk(buffer, onThinking);
+                  if (parsedResult) {
+                    result = parsedResult;
+                  }
+                  buffer = '';
+                }
+                if (result) {
+                  handleResolve(result);
+                } else {
+                  handleReject(new Error('Stream ended without result'));
+                }
+                return;
+              }
+
+              buffer += textDecoder.decode(value, { stream: true });
+              processBuffer();
+              read();
+            })
+            .catch((error) => {
+              log.error('Stream read error:', error);
+              if (error.name === 'AbortError') {
+                handleReject(new Error('Stream aborted. Please try again.'));
+                return;
+              }
+              handleReject(error instanceof Error ? error : new Error('An unexpected streaming error occurred.'));
+            });
+        };
+
+        read();
       });
     } catch (error) {
-      throw handleApiError(error);
+      log.error('Fact check stream error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('An unexpected error occurred during streaming.');
     }
   }
 };

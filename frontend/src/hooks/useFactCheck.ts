@@ -4,10 +4,7 @@ import { validateStatement, validateDomainFilter } from '../utils/validation';
 import type { 
   FactCheckResponse, 
   FactCheckRequest, 
-  UseFactCheckReturn,
-  PerplexityModel,
-  SearchContextSize,
-  SearchRecency 
+  UseFactCheckReturn
 } from '../types';
 
 /**

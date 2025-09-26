@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFactCheck } from '../useFactCheck';
 import { factCheckApi } from '../../api/perplexityApi';
+import type { FactCheckResponse } from '../../types';
 
 // Mock the API
 vi.mock('../../api/perplexityApi', () => ({
@@ -69,8 +70,8 @@ describe('useFactCheck', () => {
   });
 
   it('should set loading state during fact check', async () => {
-    let resolvePromise: (value: any) => void;
-    const promise = new Promise((resolve) => {
+    let resolvePromise: (value: FactCheckResponse) => void = () => {};
+    const promise = new Promise<FactCheckResponse>((resolve) => {
       resolvePromise = resolve;
     });
 
