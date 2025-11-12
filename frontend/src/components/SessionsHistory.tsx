@@ -4,7 +4,7 @@ import { sessionsApi, type Session } from '../api/sessionsApi';
 interface SessionsHistoryProps {
   isDarkMode: boolean;
   onSelectSession: (session: Session) => void;
-  activeTab: 'fact-check' | 'exa-search';
+  activeTab: 'fact-check' | 'exa-search' | 'linkup-search';
 }
 
 export const SessionsHistory: React.FC<SessionsHistoryProps> = ({
