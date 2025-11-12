@@ -17,7 +17,7 @@ db.pragma('journal_mode = WAL'); // Enable Write-Ahead Logging for better perfor
 // Types
 export interface Session {
   id: string;
-  type: 'fact-check' | 'exa-search';
+  type: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search';
   query: string;
   createdAt: string;
   updatedAt: string;
@@ -80,11 +80,59 @@ export interface ExaSearchResultItem {
 function initializeDatabase() {
   logger.info('Initializing database schema...');
 
-  // Sessions table
+  // Check if sessions table exists and needs migration
+  const tableInfo = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'").get();
+  
+  if (tableInfo) {
+    // Table exists, check if we need to migrate
+    try {
+      // Try to insert a test value with new type to see if constraint allows it
+      const testStmt = db.prepare("INSERT INTO sessions (id, type, query, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)");
+      const testId = 'migration-test-' + Date.now();
+      testStmt.run(testId, 'linkup-search', 'test', new Date().toISOString(), new Date().toISOString());
+      // If successful, delete the test record
+      db.prepare("DELETE FROM sessions WHERE id = ?").run(testId);
+      logger.info('Sessions table already supports new session types');
+    } catch (error) {
+      // Constraint violation means we need to migrate
+      logger.info('Migrating sessions table to support new session types...');
+      try {
+        // Create a new table with the updated constraint
+        db.exec(`
+          CREATE TABLE sessions_new (
+            id TEXT PRIMARY KEY,
+            type TEXT NOT NULL CHECK(type IN ('fact-check', 'exa-search', 'linkup-search', 'parallel-search', 'tavily-search')),
+            query TEXT NOT NULL,
+            createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+            updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+          )
+        `);
+        
+        // Copy existing data
+        db.exec(`
+          INSERT INTO sessions_new (id, type, query, createdAt, updatedAt)
+          SELECT id, type, query, createdAt, updatedAt FROM sessions
+        `);
+        
+        // Drop old table and rename new one
+        db.exec(`
+          DROP TABLE sessions;
+          ALTER TABLE sessions_new RENAME TO sessions;
+        `);
+        
+        logger.info('Successfully migrated sessions table');
+      } catch (migrationError) {
+        logger.error('Failed to migrate sessions table:', migrationError);
+        // Continue anyway - new table will be created if it doesn't exist
+      }
+    }
+  }
+  
+  // Create sessions table if it doesn't exist (or recreate after migration)
   db.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
-      type TEXT NOT NULL CHECK(type IN ('fact-check', 'exa-search')),
+      type TEXT NOT NULL CHECK(type IN ('fact-check', 'exa-search', 'linkup-search', 'parallel-search', 'tavily-search')),
       query TEXT NOT NULL,
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
@@ -186,7 +234,7 @@ export const sessionDb = {
   /**
    * Create a new session
    */
-  create(type: 'fact-check' | 'exa-search', query: string): Session {
+  create(type: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search', query: string): Session {
     const id = generateId();
     const now = new Date().toISOString();
     
@@ -227,7 +275,7 @@ export const sessionDb = {
   /**
    * Get all sessions with pagination
    */
-  getAll(limit: number = 50, offset: number = 0, type?: 'fact-check' | 'exa-search'): Session[] {
+  getAll(limit: number = 50, offset: number = 0, type?: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search'): Session[] {
     let query = 'SELECT * FROM sessions';
     const params: any[] = [];
     
@@ -282,7 +330,7 @@ export const sessionDb = {
   /**
    * Get session count
    */
-  count(type?: 'fact-check' | 'exa-search'): number {
+  count(type?: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search'): number {
     let query = 'SELECT COUNT(*) as count FROM sessions';
     const params: any[] = [];
     
