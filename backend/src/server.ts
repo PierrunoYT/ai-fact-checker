@@ -549,8 +549,7 @@ app.post('/api/parallel-search', async (req, res) => {
     }
 
     const searchOptions = {
-      objective,
-      searchQueries: searchQueries || [],
+      searchQueries: searchQueries && searchQueries.length > 0 ? searchQueries : undefined,
       maxResults: maxResults || 10,
       maxCharsPerResult: maxCharsPerResult || 10000
     };

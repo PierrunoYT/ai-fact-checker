@@ -32,7 +32,6 @@ interface ParallelSearchResponse {
 }
 
 interface ParallelSearchOptions {
-  objective: string;
   searchQueries?: string[];
   maxResults?: number;
   maxCharsPerResult?: number;
