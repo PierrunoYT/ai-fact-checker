@@ -334,7 +334,7 @@ app.post('/api/exa-search', async (req, res) => {
       userLocation,
       getText: getText || false,
       getSummary: getSummary || false,
-      getHighlights: getHighlights || true,
+      getHighlights: getHighlights || false,
       getContext: getContext || false,
       contextMaxCharacters
     };
@@ -352,9 +352,20 @@ app.post('/api/exa-search', async (req, res) => {
     });
   } catch (error) {
     logger.error('Exa search error:', error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-      details: 'Failed to perform Exa search'
+
+    // Log detailed error information for debugging
+    if (error instanceof Error) {
+      logger.error('Error message:', error.message);
+      logger.error('Error stack:', error.stack);
+    }
+
+    // Return more helpful error response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const statusCode = error instanceof Error && 'statusCode' in error ? (error as any).statusCode : 500;
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      details: 'Failed to perform Exa search. Please try again or adjust your search parameters.'
     });
   }
 });

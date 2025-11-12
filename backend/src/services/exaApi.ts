@@ -175,38 +175,36 @@ function createExaSearchRequest(
     request.endCrawlDate = convertToISO8601(options.endCrawlDate);
   }
 
-  // Configure contents retrieval
-  const contents: ExaSearchRequest['contents'] = {};
-  
-  if (options.getText) {
-    contents.text = true;
-  }
-  
-  if (options.getSummary) {
-    contents.summary = true;
-  }
-  
-  if (options.getHighlights) {
-    contents.highlights = true;
-  }
-  
-  if (options.getContext) {
-    if (options.contextMaxCharacters) {
-      contents.context = {
-        maxCharacters: options.contextMaxCharacters
-      };
-    } else {
-      contents.context = true;
+  // Configure contents retrieval only if explicitly requested
+  if (options.getText || options.getSummary || options.getHighlights || options.getContext) {
+    const contents: ExaSearchRequest['contents'] = {};
+
+    if (options.getText) {
+      contents.text = true;
     }
-  }
 
-  if (Object.keys(contents).length > 0) {
-    request.contents = contents;
-  }
+    if (options.getSummary) {
+      contents.summary = true;
+    }
 
-  // Context can also be set at top level
-  if (options.getContext && !request.contents) {
-    request.context = true;
+    if (options.getHighlights) {
+      contents.highlights = true;
+    }
+
+    if (options.getContext) {
+      if (options.contextMaxCharacters) {
+        contents.context = {
+          maxCharacters: options.contextMaxCharacters
+        };
+      } else {
+        contents.context = true;
+      }
+    }
+
+    // Only add contents if we have at least one option
+    if (Object.keys(contents).length > 0) {
+      request.contents = contents;
+    }
   }
 
   return request;
@@ -239,15 +237,17 @@ export async function searchWithExa(
 
   try {
     const requestBody = createExaSearchRequest(query, options);
-    
+
     logger.debug('Exa request body:', JSON.stringify(requestBody, null, 2));
+    logger.info(`Exa API URL: ${CONFIG.EXA_API_URL}`);
+    logger.info(`Request headers: ${JSON.stringify({ 'x-api-key': '***', 'Content-Type': 'application/json' })}`);
 
     const response = await axios.post<ExaSearchResponse>(
       CONFIG.EXA_API_URL,
       requestBody,
-      { 
-        headers, 
-        timeout: CONFIG.REQUEST_TIMEOUT 
+      {
+        headers,
+        timeout: CONFIG.REQUEST_TIMEOUT
       }
     );
 
