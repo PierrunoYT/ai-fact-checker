@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
       <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
         {activeTab === 'fact-check' 
           ? 'Enter any statement and our AI will verify its accuracy using multiple reliable sources'
-          : 'Search the web using Exa AI to find relevant sources and content'}
+          : 'Search the web using Exa AI or Linkup to find relevant sources and content'}
       </p>
 
       {/* Tab Switcher */}

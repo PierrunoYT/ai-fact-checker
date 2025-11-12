@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { factCheckApi, type FactCheckResponse, type PerplexityModel } from '../api/perplexityApi';
 import { exaApi } from '../api/exaApi';
 import { linkupApi } from '../api/linkupApi';
+import { parallelApi } from '../api/parallelApi';
 import { sessionsApi, type Session } from '../api/sessionsApi';
 import { validateStatement, validateDomainFilter } from '../utils/validation';
-import type { ExaSearchResponse, ExaSearchType, ExaCategory, LinkupSearchResponse, LinkupDepth, LinkupOutputType } from '../types';
+import type { ExaSearchResponse, ExaSearchType, ExaCategory, LinkupSearchResponse, LinkupDepth, LinkupOutputType, ParallelSearchResponse } from '../types';
 
 import { Header } from './fact-checker/Header';
 import { FactCheckForm } from './fact-checker/FactCheckForm';
@@ -12,11 +13,12 @@ import { WebSearchForm } from './fact-checker/WebSearchForm';
 import { FactCheckResults } from './fact-checker/FactCheckResults';
 import { ExaSearchResults } from './fact-checker/ExaSearchResults';
 import { LinkupSearchResults } from './fact-checker/LinkupSearchResults';
+import { ParallelSearchResults } from './fact-checker/ParallelSearchResults';
 import { EmptyState } from './fact-checker/EmptyState';
 import { ErrorDisplay } from './fact-checker/ErrorDisplay';
 
 type TabType = 'fact-check' | 'web-search';
-type SearchProvider = 'exa' | 'linkup';
+type SearchProvider = 'exa' | 'linkup' | 'parallel';
 
 export const FactChecker: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('fact-check');
@@ -70,6 +72,16 @@ export const FactChecker: React.FC = () => {
   const [linkupIncludeImages, setLinkupIncludeImages] = useState(false);
   const [linkupIncludeInlineCitations, setLinkupIncludeInlineCitations] = useState(false);
   const [linkupIncludeSources, setLinkupIncludeSources] = useState(true);
+
+  // Parallel Search state
+  const [parallelObjective, setParallelObjective] = useState('');
+  const [parallelLoading, setParallelLoading] = useState(false);
+  const [parallelResult, setParallelResult] = useState<ParallelSearchResponse | null>(null);
+  const [parallelError, setParallelError] = useState<string | null>(null);
+  const [showParallelOptions, setShowParallelOptions] = useState(false);
+  const [parallelMaxResults, setParallelMaxResults] = useState(10);
+  const [parallelMaxCharsPerResult, setParallelMaxCharsPerResult] = useState(10000);
+  const [parallelSearchQueries, setParallelSearchQueries] = useState('');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -304,11 +316,49 @@ export const FactChecker: React.FC = () => {
     setError(null);
     setExaError(null);
     setLinkupError(null);
+    setParallelError(null);
+  };
+
+  const handleParallelSearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    setParallelLoading(true);
+    setParallelError(null);
+    setParallelResult(null);
+
+    try {
+      if (!parallelObjective.trim()) {
+        throw new Error('Please enter a search objective');
+      }
+
+      const searchQueriesArray = parallelSearchQueries.trim()
+        ? parallelSearchQueries.split('\n').map(q => q.trim()).filter(q => q)
+        : undefined;
+
+      const options: any = {
+        maxResults: parallelMaxResults,
+        maxCharsPerResult: parallelMaxCharsPerResult
+      };
+
+      if (searchQueriesArray && searchQueriesArray.length > 0) {
+        options.searchQueries = searchQueriesArray;
+      }
+
+      const response = await parallelApi.search(parallelObjective, options);
+      setParallelResult(response);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setParallelError(message);
+      console.error('Error performing Parallel search:', error);
+    } finally {
+      setParallelLoading(false);
+    }
   };
 
   const handleProviderChange = () => {
     setExaError(null);
     setLinkupError(null);
+    setParallelError(null);
   };
 
   return (
@@ -406,6 +456,18 @@ export const FactChecker: React.FC = () => {
             linkupIncludeSources={linkupIncludeSources}
             setLinkupIncludeSources={setLinkupIncludeSources}
             onLinkupSubmit={handleLinkupSearchSubmit}
+            parallelObjective={parallelObjective}
+            setParallelObjective={setParallelObjective}
+            parallelLoading={parallelLoading}
+            showParallelOptions={showParallelOptions}
+            setShowParallelOptions={setShowParallelOptions}
+            parallelMaxResults={parallelMaxResults}
+            setParallelMaxResults={setParallelMaxResults}
+            parallelMaxCharsPerResult={parallelMaxCharsPerResult}
+            setParallelMaxCharsPerResult={setParallelMaxCharsPerResult}
+            parallelSearchQueries={parallelSearchQueries}
+            setParallelSearchQueries={setParallelSearchQueries}
+            onParallelSubmit={handleParallelSearchSubmit}
             onProviderChange={handleProviderChange}
           />
         )}
@@ -414,7 +476,7 @@ export const FactChecker: React.FC = () => {
       {/* Right Panel - Results */}
       <div className={`flex-1 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} overflow-y-auto`}>
         <div className="p-8">
-          <ErrorDisplay error={error || exaError || linkupError || null} isDarkMode={isDarkMode} />
+          <ErrorDisplay error={error || exaError || linkupError || parallelError || null} isDarkMode={isDarkMode} />
 
           {activeTab === 'fact-check' && result && (
             <FactCheckResults
@@ -433,11 +495,15 @@ export const FactChecker: React.FC = () => {
             <LinkupSearchResults result={linkupResult} isDarkMode={isDarkMode} />
           )}
 
+          {activeTab === 'web-search' && searchProvider === 'parallel' && parallelResult && (
+            <ParallelSearchResults result={parallelResult} isDarkMode={isDarkMode} />
+          )}
+
           {activeTab === 'fact-check' && !result && !error && !loading && (
             <EmptyState type="fact-check" isDarkMode={isDarkMode} />
           )}
 
-          {activeTab === 'web-search' && !exaResult && !linkupResult && !exaError && !linkupError && !exaLoading && !linkupLoading && (
+          {activeTab === 'web-search' && !exaResult && !linkupResult && !parallelResult && !exaError && !linkupError && !parallelError && !exaLoading && !linkupLoading && !parallelLoading && (
             <EmptyState type="web-search" isDarkMode={isDarkMode} />
           )}
         </div>

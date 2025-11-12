@@ -140,6 +140,34 @@ export interface LinkupSearchResponse {
   totalResults: number;
 }
 
+// Parallel Search Types
+export interface ParallelSearchRequest {
+  objective: string;
+  searchQueries?: string[];
+  maxResults?: number;
+  maxCharsPerResult?: number;
+}
+
+export interface ParallelSearchResult {
+  title: string;
+  url: string;
+  publishedDate?: string;
+  author?: string;
+  snippet?: string;
+  text?: string;
+  summary?: string;
+  highlights?: string[];
+  relevanceScore?: number;
+}
+
+export interface ParallelSearchResponse {
+  success: boolean;
+  query: string;
+  results: ParallelSearchResult[];
+  searchId?: string;
+  totalResults: number;
+}
+
 // Component Props Types
 export interface ModelSelectorProps {
   model: PerplexityModel;

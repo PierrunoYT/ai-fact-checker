@@ -142,7 +142,7 @@ function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS exa_search_result_items (
       id TEXT PRIMARY KEY,
       resultId TEXT NOT NULL,
-      index INTEGER NOT NULL,
+      "index" INTEGER NOT NULL,
       title TEXT NOT NULL,
       url TEXT NOT NULL,
       publishedDate TEXT,
@@ -496,7 +496,7 @@ export const exaSearchDb = {
       if (result.results.length > 0) {
         const itemStmt = db.prepare(`
           INSERT INTO exa_search_result_items (
-            id, resultId, index, title, url, publishedDate, author, snippet, text, summary, highlights, relevanceScore
+            id, resultId, "index", title, url, publishedDate, author, snippet, text, summary, highlights, relevanceScore
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
@@ -543,7 +543,7 @@ export const exaSearchDb = {
     
     if (!result) return null;
     
-    const itemStmt = db.prepare('SELECT * FROM exa_search_result_items WHERE resultId = ? ORDER BY index');
+    const itemStmt = db.prepare('SELECT * FROM exa_search_result_items WHERE resultId = ? ORDER BY "index"');
     const items = itemStmt.all(id) as any[];
     
     return {

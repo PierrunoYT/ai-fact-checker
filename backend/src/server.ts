@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { checkFactWithPerplexity, checkPerplexityApiHealth } from './services/perplexityApi';
 import { searchWithExa, checkExaApiHealth } from './services/exaApi';
 import { searchWithLinkup, checkLinkupApiHealth } from './services/linkupApi';
+import { searchWithParallel, checkParallelApiHealth } from './services/parallelApi';
 import { sessionDb, factCheckDb, exaSearchDb } from './services/database';
 import { CONFIG } from './config/constants';
 import { logger } from './utils/logger';
@@ -24,18 +25,16 @@ const port = CONFIG.SERVER.PORT;
 
 // CORS configuration with improved security
 const corsOptions = {
-  origin: CONFIG.SERVER.CORS_ORIGINS,
+  origin: CONFIG.SERVER.CORS_ORIGINS.filter(Boolean) as string[],
   credentials: true,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200 // For legacy browser support
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 };
 
 // Middleware
-app.use(cors({
-  ...corsOptions,
-  origin: CONFIG.SERVER.CORS_ORIGINS.filter(Boolean) as string[]
-}));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 
 // Request logging middleware
@@ -515,6 +514,84 @@ app.post('/api/linkup-search', async (req, res) => {
     res.status(statusCode).json({
       error: errorMessage,
       details: 'Failed to perform Linkup search. Please try again or adjust your search parameters.'
+    });
+  }
+});
+
+// Parallel search endpoint
+interface ParallelSearchRequest {
+  objective: string;
+  searchQueries?: string[];
+  maxResults?: number;
+  maxCharsPerResult?: number;
+}
+
+app.post('/api/parallel-search', async (req, res) => {
+  try {
+    const {
+      objective,
+      searchQueries,
+      maxResults,
+      maxCharsPerResult
+    } = req.body as ParallelSearchRequest;
+
+    // Validate objective
+    if (!objective || typeof objective !== 'string' || objective.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Objective is required and must be a non-empty string'
+      });
+    }
+
+    if (objective.length > 2000) {
+      return res.status(400).json({
+        error: 'Objective must be 2000 characters or less'
+      });
+    }
+
+    const searchOptions = {
+      objective,
+      searchQueries: searchQueries || [],
+      maxResults: maxResults || 10,
+      maxCharsPerResult: maxCharsPerResult || 10000
+    };
+
+    const result = await searchWithParallel(objective, searchOptions);
+    
+    // Save to database
+    try {
+      const session = sessionDb.create('exa-search', objective); // Using exa-search type for now
+      exaSearchDb.save(session.id, {
+        searchType: 'parallel',
+        results: result.results
+      });
+    } catch (dbError) {
+      logger.error('Failed to save Parallel search result to database:', dbError);
+      // Don't fail the request if database save fails
+    }
+    
+    res.json({
+      success: true,
+      query: objective,
+      results: result.results,
+      searchId: result.searchId,
+      totalResults: result.results.length
+    });
+  } catch (error) {
+    logger.error('Parallel search error:', error);
+
+    // Log detailed error information for debugging
+    if (error instanceof Error) {
+      logger.error('Error message:', error.message);
+      logger.error('Error stack:', error.stack);
+    }
+
+    // Return more helpful error response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const statusCode = error instanceof Error && 'statusCode' in error ? (error as any).statusCode : 500;
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      details: 'Failed to perform Parallel search. Please try again or adjust your search parameters.'
     });
   }
 });
