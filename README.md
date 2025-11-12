@@ -1,41 +1,60 @@
 # AI Fact Checker
 
-A powerful fact-checking application that verifies statements using Perplexity AI's advanced language models and real-time web search capabilities.
+A powerful fact-checking application that verifies statements using Perplexity AI's advanced language models and real-time web search capabilities. Features multiple search providers, session management, and a modern React-based interface.
 
 ## ✨ Features
 
-- 🔍 **Real-time Fact Checking**
-  - Instant verification using web search
-  - Confidence scores with detailed analysis
-  - Source citations with clickable links
-  - Transparent thinking process
+### 🔍 Real-time Fact Checking
+- Instant verification using web search
+- Confidence scores with detailed analysis
+- Source citations with clickable links
+- Transparent thinking process
+- Streaming support for real-time updates
 
-- 🤖 **Multiple AI Models**
-  - `sonar`: Fast checks (127k context)
-  - `sonar-pro`: Enhanced capabilities (200k context)
-  - `sonar-reasoning`: Detailed analysis with citations
-  - `sonar-reasoning-pro`: Premium model with extensive reasoning
+### 🤖 Multiple AI Models
+- `sonar`: Fast checks (127k context, 4k max tokens)
+- `sonar-pro`: Enhanced capabilities (200k context, 8k max tokens)
+- `sonar-reasoning`: Detailed analysis with citations (127k context, 4k max tokens)
+- `sonar-reasoning-pro`: Premium model with extensive reasoning (127k context, 8k max tokens)
 
-- 🌐 **Advanced Search Options**
-  - Domain filtering to include/exclude specific websites
-  - Date range filtering for time-specific research
-  - Adjustable search context size (low/medium/high)
-  - Recency filters (month/week/day/hour)
+### 🌐 Multiple Search Providers
+- **Exa AI**: Neural search with content extraction, summaries, and highlights
+- **Linkup**: Deep web search with sourced answers and inline citations
+- **Parallel AI**: Parallel search with custom query optimization
+- **Tavily**: Fast search with answer generation and topic filtering
 
-- 💻 **Modern Interface**
-  - Clean, responsive design
-  - Dark/Light mode support
-  - Real-time updates
-  - Usage statistics tracking
+### 🔧 Advanced Search Options
+- Domain filtering to include/exclude specific websites
+- Date range filtering for time-specific research
+- Adjustable search context size (low/medium/high)
+- Recency filters (month/week/day/hour)
+- Category filtering (for Exa: company, research paper, news, PDF, GitHub, etc.)
+- Search depth control (basic/advanced for Tavily, standard/deep for Linkup)
+
+### 💾 Session Management
+- Automatic session history with SQLite database
+- Save and retrieve fact-check results
+- Search history tracking
+- Session-based result storage
+
+### 💻 Modern Interface
+- Clean, responsive design with split-panel layout
+- Dark/Light mode support with system preference detection
+- Real-time updates and loading states
+- Usage statistics tracking
+- Error boundaries for graceful error handling
+- Tabbed interface for fact-checking and web search
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js v18+
 - npm v8+
-- Perplexity AI API key (required)
-- Exa AI API key (optional, for enhanced web search)
-- Linkup API key (optional, for web search functionality)
+- **Required**: Perplexity AI API key (for fact-checking)
+- **Optional**: Exa AI API key (for Exa web search)
+- **Optional**: Linkup API key (for Linkup web search)
+- **Optional**: Parallel AI API key (for Parallel web search)
+- **Optional**: Tavily API key (for Tavily web search)
 
 ### Installation
 
@@ -55,14 +74,18 @@ A powerful fact-checking application that verifies statements using Perplexity A
    # Backend (.env)
    cd backend
    cp env.template .env
-     # Edit .env and add your API keys:
-     # - PERPLEXITY_API_KEY (required for fact-checking)
-     # - EXA_API_KEY (optional, for web search functionality)
-     # - LINKUP_API_KEY (optional, for web search functionality)
+   # Edit .env and add your API keys:
+   # - PERPLEXITY_API_KEY (required for fact-checking)
+   # - EXA_API_KEY (optional, for Exa web search)
+   # - LINKUP_API_KEY (optional, for Linkup web search)
+   # - PARALLEL_API_KEY (optional, for Parallel web search)
+   # - TAVILY_API_KEY (optional, for Tavily web search)
 
    # Frontend (.env)
    cd ../frontend
    cp env.template .env
+   # Edit .env and configure:
+   # - VITE_API_URL=http://localhost:3000/api
    ```
 
 4. **Start Development Servers**
@@ -77,34 +100,65 @@ A powerful fact-checking application that verifies statements using Perplexity A
 
 ## 📖 Usage
 
+### Fact Checking
 1. **Select Model**
    - `sonar/sonar-pro`: Quick fact checks
-   - `sonar-reasoning/pro`: Detailed analysis
+   - `sonar-reasoning/pro`: Detailed analysis with reasoning
 
 2. **Enter Statement**
    - Type or paste any statement
+   - Configure advanced options (domains, dates, context size)
    - Click "Check Fact" or press Enter
 
 3. **Review Results**
-   - Factual assessment
-   - Confidence score
+   - Factual assessment (true/false)
+   - Confidence score (0-1)
    - Detailed explanation
-   - Source links
-   - Analysis process
+   - Source citations with clickable links
+   - Thinking process (for reasoning models)
+   - Usage statistics
+
+### Web Search
+1. **Select Search Provider**
+   - Choose from Exa, Linkup, Parallel, or Tavily
+   - Each provider has unique features and capabilities
+
+2. **Enter Search Query**
+   - Type your search query
+   - Configure provider-specific options
+   - Submit search
+
+3. **Review Results**
+   - Search results with titles, URLs, snippets
+   - Full text content (when available)
+   - AI-generated summaries and highlights
+   - Relevance scores
+   - Source citations
 
 ## 🛠 Tech Stack
 
-- **Frontend**
-  - React + TypeScript
-  - Tailwind CSS
-  - Vite
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for fast development and building
+- **Tailwind CSS** for styling
+- **React Router** for navigation
+- **Axios** for API communication with retry logic
+- **Custom Hooks** for state management and API calls
 
-- **Backend**
-  - Node.js + Express
-  - TypeScript
-  - Perplexity AI API
-  - Exa AI API (for web search)
-  - Linkup API (for web search)
+### Backend
+- **Node.js** with Express.js
+- **TypeScript** for type safety
+- **Better-SQLite3** for session and result storage
+- **Axios** for external API calls
+- **CORS** enabled for cross-origin requests
+- **Request logging** and error handling middleware
+
+### APIs & Services
+- **Perplexity AI** - Fact-checking and reasoning
+- **Exa AI** - Neural web search with content extraction
+- **Linkup** - Deep web search with sourced answers
+- **Parallel AI** - Parallel search optimization
+- **Tavily** - Fast search with answer generation
 
 ## 📡 API Endpoints
 
@@ -179,24 +233,83 @@ Content-Type: application/json
 {
   "success": true,
   "query": "search query",
-  "results": [
+  "results": [...],
+  "answer": "AI-generated answer",
+  "sources": [
     {
-      "title": "Result title",
+      "name": "Source Name",
       "url": "https://example.com",
-      "publishedDate": "2024-01-01T00:00:00.000Z",
-      "author": "Author Name",
-      "snippet": "Brief excerpt...",
-      "text": "Full text content...",
-      "summary": "AI-generated summary...",
-      "highlights": ["Relevant excerpt 1", "Relevant excerpt 2"],
-      "relevanceScore": 0.95
+      "snippet": "Relevant excerpt"
     }
   ],
-  "searchType": "neural",
-  "costDollars": 0.005,
-  "requestId": "unique-request-id",
   "totalResults": 10
 }
+```
+
+### Parallel Web Search
+```http
+POST /api/parallel-search
+Content-Type: application/json
+
+{
+  "objective": string,
+  "searchQueries": string[], // optional, auto-generated if not provided
+  "maxResults": number, // default: 10
+  "maxCharsPerResult": number // default: 10000
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "query": "objective",
+  "results": [...],
+  "searchId": "unique-search-id",
+  "totalResults": 10
+}
+```
+
+### Tavily Web Search
+```http
+POST /api/tavily-search
+Content-Type: application/json
+
+{
+  "query": string,
+  "searchDepth": "basic" | "advanced", // default: "basic"
+  "maxResults": number, // default: 10
+  "includeDomains": string[],
+  "excludeDomains": string[],
+  "includeAnswer": boolean, // default: false
+  "includeImages": boolean, // default: false
+  "includeRawContent": boolean, // default: false
+  "topic": "general" | "news" // default: "general"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "query": "search query",
+  "results": [...],
+  "answer": "AI-generated answer",
+  "responseTime": 0.5,
+  "totalResults": 10
+}
+```
+
+### Sessions Management
+```http
+# Get all sessions
+GET /api/sessions?type=fact-check&limit=50&offset=0
+
+# Get session by ID with results
+GET /api/sessions/:id
+
+# Delete session
+DELETE /api/sessions/:id
 ```
 
 ### Health Check
@@ -216,6 +329,14 @@ GET /health
     "exa": {
       "configured": true,
       "connected": true
+    },
+    "linkup": {
+      "configured": true,
+      "connected": true
+    },
+    "tavily": {
+      "configured": true,
+      "connected": true
     }
   },
   "models": ["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro"]
@@ -227,28 +348,68 @@ GET /health
 ### Project Structure
 ```
 ai-fact-checker/
-├── 📁 backend/                 # Express.js API server
+├── 📁 backend/                      # Express.js API server
 │   ├── 📁 src/
-│   │   ├── 📁 config/         # Configuration constants
-│   │   ├── 📁 services/       # Business logic services
-│   │   ├── 📁 utils/          # Utility functions & validation
-│   │   └── 📄 server.ts       # Main server file
-│   ├── 📄 .env.example        # Environment template
-│   └── 📄 package.json
-├── 📁 frontend/               # React + TypeScript frontend
+│   │   ├── 📁 config/               # Configuration constants
+│   │   │   └── constants.ts        # API URLs, models, defaults
+│   │   ├── 📁 services/             # Business logic services
+│   │   │   ├── database.ts         # SQLite database operations
+│   │   │   ├── perplexityApi.ts    # Perplexity AI integration
+│   │   │   ├── exaApi.ts           # Exa AI search integration
+│   │   │   ├── linkupApi.ts        # Linkup search integration
+│   │   │   ├── parallelApi.ts      # Parallel AI search integration
+│   │   │   └── tavilyApi.ts        # Tavily search integration
+│   │   ├── 📁 utils/               # Utility functions
+│   │   │   ├── logger.ts          # Request/error logging
+│   │   │   ├── validation.ts      # Input validation
+│   │   │   └── __tests__/         # Test files
+│   │   └── 📄 server.ts            # Main Express server
+│   ├── 📁 data/                    # SQLite database files
+│   ├── 📄 env.template             # Environment template
+│   ├── 📄 package.json
+│   └── 📄 tsconfig.json
+├── 📁 frontend/                    # React + TypeScript frontend
 │   ├── 📁 src/
-│   │   ├── 📁 api/           # API client with retry logic
-│   │   ├── 📁 components/    # Reusable React components
-│   │   ├── 📁 hooks/         # Custom React hooks
-│   │   ├── 📁 types/         # TypeScript definitions
-│   │   ├── 📁 utils/         # Frontend utilities
-│   │   └── 📄 App.tsx        # Main application
-│   ├── 📄 .env.example       # Environment template
-│   └── 📄 package.json
-├── 📄 start-dev.js           # Development launcher
-├── 📄 DEVELOPMENT.md         # Development guide
-├── 📄 CODE_ISSUES_REPORT.md  # Code quality report
-└── 📄 package.json           # Root configuration
+│   │   ├── 📁 api/                 # API client modules
+│   │   │   ├── apiClient.ts       # Base API client with retry
+│   │   │   ├── perplexityApi.ts   # Fact-check API
+│   │   │   ├── exaApi.ts          # Exa search API
+│   │   │   ├── linkupApi.ts       # Linkup search API
+│   │   │   ├── parallelApi.ts     # Parallel search API
+│   │   │   ├── tavilyApi.ts       # Tavily search API
+│   │   │   └── sessionsApi.ts     # Session management API
+│   │   ├── 📁 components/          # React components
+│   │   │   ├── FactChecker.tsx    # Main application component
+│   │   │   ├── 📁 fact-checker/   # Fact-check specific components
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── FactCheckForm.tsx
+│   │   │   │   ├── FactCheckResults.tsx
+│   │   │   │   ├── ExaSearchForm.tsx
+│   │   │   │   ├── ExaSearchResults.tsx
+│   │   │   │   └── ... (other search forms/results)
+│   │   │   ├── ErrorBoundary.tsx
+│   │   │   ├── LoadingSpinner.tsx
+│   │   │   └── SessionsHistory.tsx
+│   │   ├── 📁 hooks/               # Custom React hooks
+│   │   │   ├── useFactCheck.ts
+│   │   │   ├── useFormState.ts
+│   │   │   └── useTheme.ts
+│   │   ├── 📁 types/               # TypeScript definitions
+│   │   │   └── index.ts            # All type definitions
+│   │   ├── 📁 utils/               # Frontend utilities
+│   │   │   └── validation.ts       # Client-side validation
+│   │   ├── 📄 App.tsx              # Root component
+│   │   └── 📄 main.tsx             # Entry point
+│   ├── 📄 env.template             # Environment template
+│   ├── 📄 package.json
+│   ├── 📄 vite.config.ts
+│   └── 📄 tailwind.config.js
+├── 📄 start-dev.js                 # Development launcher script
+├── 📄 DEVELOPMENT.md               # Development guide
+├── 📄 CODE_ISSUES_REPORT.md        # Code quality report
+├── 📄 EXA_INTEGRATION.md           # Exa API documentation
+├── 📄 LINKUP_INTEGRATION.md         # Linkup API documentation
+└── 📄 package.json                 # Root configuration
 ```
 
 ### Available Scripts
@@ -288,8 +449,11 @@ npm run start           # Start production server
 1. **API Key Error**
    ```bash
    # Check API keys are set in backend/.env
-   PERPLEXITY_API_KEY=your_api_key_here
-   EXA_API_KEY=your_exa_api_key_here  # Optional
+   PERPLEXITY_API_KEY=your_api_key_here  # Required
+   EXA_API_KEY=your_exa_api_key_here      # Optional
+   LINKUP_API_KEY=your_linkup_api_key_here # Optional
+   PARALLEL_API_KEY=your_parallel_api_key_here # Optional
+   TAVILY_API_KEY=your_tavily_api_key_here # Optional
    ```
 
 2. **Port Conflicts**
@@ -312,9 +476,21 @@ MIT License - see [LICENSE](LICENSE)
 **PierrunoYT**
 - 💻 [@PierrunoYT](https://github.com/PierrunoYT)
 
+## 📚 Additional Documentation
+
+- [Development Guide](DEVELOPMENT.md) - Detailed development setup and guidelines
+- [Exa Integration](EXA_INTEGRATION.md) - Exa AI API integration details
+- [Linkup Integration](LINKUP_INTEGRATION.md) - Linkup API integration details
+
 ## 🙏 Acknowledgments
 
-- [Perplexity AI](https://www.perplexity.ai/)
-- [React](https://reactjs.org/)
-- [Express](https://expressjs.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
+- [Perplexity AI](https://www.perplexity.ai/) - Fact-checking and reasoning models
+- [Exa AI](https://exa.ai/) - Neural web search
+- [Linkup](https://linkup.so/) - Deep web search
+- [Parallel AI](https://parallel.ai/) - Parallel search optimization
+- [Tavily](https://tavily.com/) - Fast search with answer generation
+- [React](https://reactjs.org/) - UI framework
+- [Express](https://expressjs.com/) - Backend framework
+- [Tailwind CSS](https://tailwindcss.com/) - Styling framework
+- [Vite](https://vitejs.dev/) - Build tool
+- [Better-SQLite3](https://github.com/WiseLibs/better-sqlite3) - Database
