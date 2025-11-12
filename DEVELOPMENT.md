@@ -30,11 +30,11 @@
 3. **Environment Setup**
    ```bash
    # Backend environment
-   cp backend/.env.example backend/.env
-   # Edit backend/.env and add your Perplexity API key
+   cp backend/env.template backend/.env
+   # Edit backend/.env and add your API keys (Perplexity and optionally Exa)
    
    # Frontend environment (optional)
-   cp frontend/.env.example frontend/.env
+   cp frontend/env.template frontend/.env
    ```
 
 4. **Start development servers**
@@ -179,6 +179,7 @@ describe('validateStatement', () => {
 **Backend (.env):**
 ```env
 PERPLEXITY_API_KEY=your_api_key_here
+EXA_API_KEY=your_exa_api_key_here  # Optional, for web search
 PORT=3000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173

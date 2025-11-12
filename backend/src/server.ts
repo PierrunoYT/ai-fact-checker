@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { checkFactWithPerplexity, checkPerplexityApiHealth } from './services/perplexityApi';
+import { searchWithExa, checkExaApiHealth } from './services/exaApi';
 import { CONFIG } from './config/constants';
 import { logger } from './utils/logger';
 import {
@@ -256,21 +257,146 @@ app.post('/api/check-fact', validateFactCheckRequest, async (req, res) => {
   }
 });
 
+// Exa search endpoint
+interface ExaSearchRequest {
+  query: string;
+  type?: 'neural' | 'keyword' | 'auto' | 'fast';
+  numResults?: number;
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  startPublishedDate?: string;
+  endPublishedDate?: string;
+  category?: string;
+  userLocation?: string;
+  getText?: boolean;
+  getSummary?: boolean;
+  getHighlights?: boolean;
+  getContext?: boolean;
+  contextMaxCharacters?: number;
+}
+
+app.post('/api/exa-search', async (req, res) => {
+  try {
+    const {
+      query,
+      type,
+      numResults,
+      includeDomains,
+      excludeDomains,
+      startPublishedDate,
+      endPublishedDate,
+      category,
+      userLocation,
+      getText,
+      getSummary,
+      getHighlights,
+      getContext,
+      contextMaxCharacters
+    } = req.body as ExaSearchRequest;
+
+    // Validate query
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Query is required and must be a non-empty string'
+      });
+    }
+
+    if (query.length > 1000) {
+      return res.status(400).json({
+        error: 'Query must be 1000 characters or less'
+      });
+    }
+
+    // Validate domains if provided
+    if (includeDomains) {
+      validateSearchDomains(includeDomains);
+    }
+    if (excludeDomains) {
+      validateSearchDomains(excludeDomains);
+    }
+
+    // Validate dates if provided
+    if (startPublishedDate) {
+      validateDateFormat(startPublishedDate, 'startPublishedDate');
+    }
+    if (endPublishedDate) {
+      validateDateFormat(endPublishedDate, 'endPublishedDate');
+    }
+
+    const searchOptions = {
+      type,
+      numResults: numResults || 10,
+      includeDomains,
+      excludeDomains,
+      startPublishedDate,
+      endPublishedDate,
+      category,
+      userLocation,
+      getText: getText || false,
+      getSummary: getSummary || false,
+      getHighlights: getHighlights || true,
+      getContext: getContext || false,
+      contextMaxCharacters
+    };
+
+    const result = await searchWithExa(query, searchOptions);
+    
+    res.json({
+      success: true,
+      query,
+      results: result.results,
+      searchType: result.searchType,
+      costDollars: result.costDollars,
+      requestId: result.requestId,
+      totalResults: result.results.length
+    });
+  } catch (error) {
+    logger.error('Exa search error:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      details: 'Failed to perform Exa search'
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const apiHealth = await checkPerplexityApiHealth();
+    const [perplexityHealth, exaHealth] = await Promise.allSettled([
+      checkPerplexityApiHealth(),
+      checkExaApiHealth()
+    ]);
+
+    const perplexityConnected = perplexityHealth.status === 'fulfilled' && perplexityHealth.value;
+    const exaConnected = exaHealth.status === 'fulfilled' && exaHealth.value;
+
     res.json({ 
-      status: apiHealth ? 'ok' : 'error',
-      apiConfigured: !!process.env.PERPLEXITY_API_KEY,
-      apiConnected: apiHealth,
+      status: (perplexityConnected || exaConnected) ? 'ok' : 'error',
+      apis: {
+        perplexity: {
+          configured: !!process.env.PERPLEXITY_API_KEY,
+          connected: perplexityConnected
+        },
+        exa: {
+          configured: !!process.env.EXA_API_KEY,
+          connected: exaConnected
+        }
+      },
       models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro']
     });
   } catch (error) {
     res.status(500).json({
       status: 'error',
-      apiConfigured: !!process.env.PERPLEXITY_API_KEY,
-      apiConnected: false,
+      apis: {
+        perplexity: {
+          configured: !!process.env.PERPLEXITY_API_KEY,
+          connected: false
+        },
+        exa: {
+          configured: !!process.env.EXA_API_KEY,
+          connected: false
+        }
+      },
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     });
   }

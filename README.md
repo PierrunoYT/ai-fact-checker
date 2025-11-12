@@ -33,7 +33,8 @@ A powerful fact-checking application that verifies statements using Perplexity A
 ### Prerequisites
 - Node.js v18+
 - npm v8+
-- Perplexity AI API key
+- Perplexity AI API key (required)
+- Exa AI API key (optional, for enhanced web search)
 
 ### Installation
 
@@ -52,12 +53,14 @@ A powerful fact-checking application that verifies statements using Perplexity A
    ```bash
    # Backend (.env)
    cd backend
-   cp .env.example .env
-   # Edit .env and add your Perplexity API key
+   cp env.template .env
+   # Edit .env and add your API keys:
+   # - PERPLEXITY_API_KEY (required for fact-checking)
+   # - EXA_API_KEY (optional, for web search functionality)
 
    # Frontend (.env)
    cd ../frontend
-   cp .env.example .env
+   cp env.template .env
    ```
 
 4. **Start Development Servers**
@@ -98,6 +101,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
   - Node.js + Express
   - TypeScript
   - Perplexity AI API
+  - Exa AI API (for web search)
 
 ## 📡 API Endpoints
 
@@ -125,9 +129,75 @@ Content-Type: application/json
 }
 ```
 
+### Exa Web Search
+```http
+POST /api/exa-search
+Content-Type: application/json
+
+{
+  "query": string,
+  "type": "neural" | "keyword" | "auto" | "fast",
+  "numResults": number, // 1-100, default: 10
+  "includeDomains": string[],
+  "excludeDomains": string[],
+  "startPublishedDate": string, // ISO 8601 or MM/DD/YYYY format
+  "endPublishedDate": string, // ISO 8601 or MM/DD/YYYY format
+  "category": "company" | "research paper" | "news" | "pdf" | "github" | "tweet" | "personal site" | "linkedin profile" | "financial report",
+  "userLocation": string, // ISO country code (e.g., "US")
+  "getText": boolean,
+  "getSummary": boolean,
+  "getHighlights": boolean,
+  "getContext": boolean,
+  "contextMaxCharacters": number
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "query": "search query",
+  "results": [
+    {
+      "title": "Result title",
+      "url": "https://example.com",
+      "publishedDate": "2024-01-01T00:00:00.000Z",
+      "author": "Author Name",
+      "snippet": "Brief excerpt...",
+      "text": "Full text content...",
+      "summary": "AI-generated summary...",
+      "highlights": ["Relevant excerpt 1", "Relevant excerpt 2"],
+      "relevanceScore": 0.95
+    }
+  ],
+  "searchType": "neural",
+  "costDollars": 0.005,
+  "requestId": "unique-request-id",
+  "totalResults": 10
+}
+```
+
 ### Health Check
 ```http
 GET /health
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "apis": {
+    "perplexity": {
+      "configured": true,
+      "connected": true
+    },
+    "exa": {
+      "configured": true,
+      "connected": true
+    }
+  },
+  "models": ["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro"]
+}
 ```
 
 ## 🔧 Development
@@ -195,8 +265,9 @@ npm run start           # Start production server
 
 1. **API Key Error**
    ```bash
-   # Check API key is set in backend/.env
+   # Check API keys are set in backend/.env
    PERPLEXITY_API_KEY=your_api_key_here
+   EXA_API_KEY=your_exa_api_key_here  # Optional
    ```
 
 2. **Port Conflicts**

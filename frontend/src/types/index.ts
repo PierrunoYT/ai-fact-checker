@@ -52,6 +52,49 @@ export type PerplexityModel = 'sonar' | 'sonar-pro' | 'sonar-reasoning' | 'sonar
 export type SearchRecency = 'month' | 'week' | 'day' | 'hour';
 export type SearchContextSize = 'low' | 'medium' | 'high';
 
+// Exa Search Types
+export type ExaSearchType = 'neural' | 'keyword' | 'auto' | 'fast';
+export type ExaCategory = 'company' | 'research paper' | 'news' | 'pdf' | 'github' | 'tweet' | 'personal site' | 'linkedin profile' | 'financial report';
+
+export interface ExaSearchRequest {
+  query: string;
+  type?: ExaSearchType;
+  numResults?: number;
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  startPublishedDate?: string;
+  endPublishedDate?: string;
+  category?: ExaCategory;
+  userLocation?: string;
+  getText?: boolean;
+  getSummary?: boolean;
+  getHighlights?: boolean;
+  getContext?: boolean;
+  contextMaxCharacters?: number;
+}
+
+export interface ExaSearchResult {
+  title: string;
+  url: string;
+  publishedDate?: string;
+  author?: string;
+  snippet?: string;
+  text?: string;
+  summary?: string;
+  highlights?: string[];
+  relevanceScore?: number;
+}
+
+export interface ExaSearchResponse {
+  success: boolean;
+  query: string;
+  results: ExaSearchResult[];
+  searchType: string;
+  costDollars?: number;
+  requestId?: string;
+  totalResults: number;
+}
+
 // Component Props Types
 export interface ModelSelectorProps {
   model: PerplexityModel;

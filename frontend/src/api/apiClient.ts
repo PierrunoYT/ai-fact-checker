@@ -77,7 +77,7 @@ class ApiClient {
     );
   }
 
-  private handleError(error: any): ApiError {
+  private handleError(error: unknown): ApiError {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
       const data = error.response?.data;
@@ -184,7 +184,7 @@ class ApiClient {
     return baseDelay + jitter;
   }
 
-  async request<T = any>(config: AxiosRequestConfig, attempt: number = 1): Promise<T> {
+  async request<T = unknown>(config: AxiosRequestConfig, attempt: number = 1): Promise<T> {
     try {
       const response: AxiosResponse<T> = await this.client.request(config);
       return response.data;
@@ -206,23 +206,23 @@ class ApiClient {
     }
   }
 
-  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>({ ...config, method: 'GET', url });
   }
 
-  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>({ ...config, method: 'POST', url, data });
   }
 
-  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>({ ...config, method: 'PUT', url, data });
   }
 
-  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>({ ...config, method: 'PATCH', url, data });
   }
 
-  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return this.request<T>({ ...config, method: 'DELETE', url });
   }
 
