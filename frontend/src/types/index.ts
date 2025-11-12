@@ -168,6 +168,43 @@ export interface ParallelSearchResponse {
   totalResults: number;
 }
 
+// Tavily Search Types
+export type TavilySearchDepth = 'basic' | 'advanced';
+export type TavilyTopic = 'general' | 'news';
+
+export interface TavilySearchRequest {
+  query: string;
+  searchDepth?: TavilySearchDepth;
+  maxResults?: number;
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  includeAnswer?: boolean;
+  includeImages?: boolean;
+  includeRawContent?: boolean;
+  topic?: TavilyTopic;
+}
+
+export interface TavilySearchResult {
+  title: string;
+  url: string;
+  publishedDate?: string;
+  author?: string;
+  snippet?: string;
+  text?: string;
+  summary?: string;
+  highlights?: string[];
+  relevanceScore?: number;
+}
+
+export interface TavilySearchResponse {
+  success: boolean;
+  query: string;
+  results: TavilySearchResult[];
+  answer?: string;
+  responseTime?: number;
+  totalResults: number;
+}
+
 // Component Props Types
 export interface ModelSelectorProps {
   model: PerplexityModel;

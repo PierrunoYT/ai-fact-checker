@@ -3,9 +3,10 @@ import { factCheckApi, type FactCheckResponse, type PerplexityModel } from '../a
 import { exaApi } from '../api/exaApi';
 import { linkupApi } from '../api/linkupApi';
 import { parallelApi } from '../api/parallelApi';
+import { tavilyApi } from '../api/tavilyApi';
 import { sessionsApi, type Session } from '../api/sessionsApi';
 import { validateStatement, validateDomainFilter } from '../utils/validation';
-import type { ExaSearchResponse, ExaSearchType, ExaCategory, LinkupSearchResponse, LinkupDepth, LinkupOutputType, ParallelSearchResponse } from '../types';
+import type { ExaSearchResponse, ExaSearchType, ExaCategory, LinkupSearchResponse, LinkupDepth, LinkupOutputType, ParallelSearchResponse, TavilySearchResponse, TavilySearchDepth, TavilyTopic } from '../types';
 
 import { Header } from './fact-checker/Header';
 import { FactCheckForm } from './fact-checker/FactCheckForm';
@@ -14,11 +15,12 @@ import { FactCheckResults } from './fact-checker/FactCheckResults';
 import { ExaSearchResults } from './fact-checker/ExaSearchResults';
 import { LinkupSearchResults } from './fact-checker/LinkupSearchResults';
 import { ParallelSearchResults } from './fact-checker/ParallelSearchResults';
+import { TavilySearchResults } from './fact-checker/TavilySearchResults';
 import { EmptyState } from './fact-checker/EmptyState';
 import { ErrorDisplay } from './fact-checker/ErrorDisplay';
 
 type TabType = 'fact-check' | 'web-search';
-type SearchProvider = 'exa' | 'linkup' | 'parallel';
+type SearchProvider = 'exa' | 'linkup' | 'parallel' | 'tavily';
 
 export const FactChecker: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('fact-check');
@@ -82,6 +84,21 @@ export const FactChecker: React.FC = () => {
   const [parallelMaxResults, setParallelMaxResults] = useState(10);
   const [parallelMaxCharsPerResult, setParallelMaxCharsPerResult] = useState(10000);
   const [parallelSearchQueries, setParallelSearchQueries] = useState('');
+
+  // Tavily Search state
+  const [tavilyQuery, setTavilyQuery] = useState('');
+  const [tavilyLoading, setTavilyLoading] = useState(false);
+  const [tavilyResult, setTavilyResult] = useState<TavilySearchResponse | null>(null);
+  const [tavilyError, setTavilyError] = useState<string | null>(null);
+  const [showTavilyOptions, setShowTavilyOptions] = useState(false);
+  const [tavilySearchDepth, setTavilySearchDepth] = useState<TavilySearchDepth>('basic');
+  const [tavilyMaxResults, setTavilyMaxResults] = useState(10);
+  const [tavilyIncludeDomains, setTavilyIncludeDomains] = useState('');
+  const [tavilyExcludeDomains, setTavilyExcludeDomains] = useState('');
+  const [tavilyIncludeAnswer, setTavilyIncludeAnswer] = useState(false);
+  const [tavilyIncludeImages, setTavilyIncludeImages] = useState(false);
+  const [tavilyIncludeRawContent, setTavilyIncludeRawContent] = useState(false);
+  const [tavilyTopic, setTavilyTopic] = useState<TavilyTopic>('general');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -317,6 +334,7 @@ export const FactChecker: React.FC = () => {
     setExaError(null);
     setLinkupError(null);
     setParallelError(null);
+    setTavilyError(null);
   };
 
   const handleParallelSearchSubmit = async (e: React.FormEvent) => {
@@ -359,6 +377,54 @@ export const FactChecker: React.FC = () => {
     setExaError(null);
     setLinkupError(null);
     setParallelError(null);
+    setTavilyError(null);
+  };
+
+  const handleTavilySearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    setTavilyLoading(true);
+    setTavilyError(null);
+    setTavilyResult(null);
+
+    try {
+      if (!tavilyQuery.trim()) {
+        throw new Error('Please enter a search query');
+      }
+
+      const includeDomainsArray = tavilyIncludeDomains.trim()
+        ? tavilyIncludeDomains.split(',').map(d => d.trim()).filter(d => d && !d.startsWith('-'))
+        : undefined;
+      
+      const excludeDomainsArray = tavilyExcludeDomains.trim()
+        ? tavilyExcludeDomains.split(',').map(d => d.trim().replace(/^-/, '')).filter(d => d)
+        : undefined;
+
+      const options: any = {
+        searchDepth: tavilySearchDepth,
+        maxResults: tavilyMaxResults,
+        includeAnswer: tavilyIncludeAnswer,
+        includeImages: tavilyIncludeImages,
+        includeRawContent: tavilyIncludeRawContent,
+        topic: tavilyTopic
+      };
+
+      if (includeDomainsArray && includeDomainsArray.length > 0) {
+        options.includeDomains = includeDomainsArray;
+      }
+      if (excludeDomainsArray && excludeDomainsArray.length > 0) {
+        options.excludeDomains = excludeDomainsArray;
+      }
+
+      const response = await tavilyApi.search(tavilyQuery, options);
+      setTavilyResult(response);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setTavilyError(message);
+      console.error('Error performing Tavily search:', error);
+    } finally {
+      setTavilyLoading(false);
+    }
   };
 
   return (
@@ -468,6 +534,28 @@ export const FactChecker: React.FC = () => {
             parallelSearchQueries={parallelSearchQueries}
             setParallelSearchQueries={setParallelSearchQueries}
             onParallelSubmit={handleParallelSearchSubmit}
+            tavilyQuery={tavilyQuery}
+            setTavilyQuery={setTavilyQuery}
+            tavilyLoading={tavilyLoading}
+            showTavilyOptions={showTavilyOptions}
+            setShowTavilyOptions={setShowTavilyOptions}
+            tavilySearchDepth={tavilySearchDepth}
+            setTavilySearchDepth={setTavilySearchDepth}
+            tavilyMaxResults={tavilyMaxResults}
+            setTavilyMaxResults={setTavilyMaxResults}
+            tavilyIncludeDomains={tavilyIncludeDomains}
+            setTavilyIncludeDomains={setTavilyIncludeDomains}
+            tavilyExcludeDomains={tavilyExcludeDomains}
+            setTavilyExcludeDomains={setTavilyExcludeDomains}
+            tavilyIncludeAnswer={tavilyIncludeAnswer}
+            setTavilyIncludeAnswer={setTavilyIncludeAnswer}
+            tavilyIncludeImages={tavilyIncludeImages}
+            setTavilyIncludeImages={setTavilyIncludeImages}
+            tavilyIncludeRawContent={tavilyIncludeRawContent}
+            setTavilyIncludeRawContent={setTavilyIncludeRawContent}
+            tavilyTopic={tavilyTopic}
+            setTavilyTopic={setTavilyTopic}
+            onTavilySubmit={handleTavilySearchSubmit}
             onProviderChange={handleProviderChange}
           />
         )}
@@ -476,7 +564,7 @@ export const FactChecker: React.FC = () => {
       {/* Right Panel - Results */}
       <div className={`flex-1 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} overflow-y-auto`}>
         <div className="p-8">
-          <ErrorDisplay error={error || exaError || linkupError || parallelError || null} isDarkMode={isDarkMode} />
+          <ErrorDisplay error={error || exaError || linkupError || parallelError || tavilyError || null} isDarkMode={isDarkMode} />
 
           {activeTab === 'fact-check' && result && (
             <FactCheckResults
@@ -499,11 +587,15 @@ export const FactChecker: React.FC = () => {
             <ParallelSearchResults result={parallelResult} isDarkMode={isDarkMode} />
           )}
 
+          {activeTab === 'web-search' && searchProvider === 'tavily' && tavilyResult && (
+            <TavilySearchResults result={tavilyResult} isDarkMode={isDarkMode} />
+          )}
+
           {activeTab === 'fact-check' && !result && !error && !loading && (
             <EmptyState type="fact-check" isDarkMode={isDarkMode} />
           )}
 
-          {activeTab === 'web-search' && !exaResult && !linkupResult && !parallelResult && !exaError && !linkupError && !parallelError && !exaLoading && !linkupLoading && !parallelLoading && (
+          {activeTab === 'web-search' && !exaResult && !linkupResult && !parallelResult && !tavilyResult && !exaError && !linkupError && !parallelError && !tavilyError && !exaLoading && !linkupLoading && !parallelLoading && !tavilyLoading && (
             <EmptyState type="web-search" isDarkMode={isDarkMode} />
           )}
         </div>

@@ -3,10 +3,11 @@ import { SessionsHistory } from '../SessionsHistory';
 import { ExaSearchForm } from './ExaSearchForm';
 import { LinkupSearchForm } from './LinkupSearchForm';
 import { ParallelSearchForm } from './ParallelSearchForm';
-import type { ExaSearchType, ExaCategory, LinkupDepth, LinkupOutputType } from '../../types';
+import { TavilySearchForm } from './TavilySearchForm';
+import type { ExaSearchType, ExaCategory, LinkupDepth, LinkupOutputType, TavilySearchDepth, TavilyTopic } from '../../types';
 import type { Session } from '../../api/sessionsApi';
 
-type SearchProvider = 'exa' | 'linkup' | 'parallel';
+type SearchProvider = 'exa' | 'linkup' | 'parallel' | 'tavily';
 
 interface WebSearchFormProps {
   searchProvider: SearchProvider;
@@ -82,6 +83,29 @@ interface WebSearchFormProps {
   parallelSearchQueries: string;
   setParallelSearchQueries: (queries: string) => void;
   onParallelSubmit: (e: React.FormEvent) => void;
+  // Tavily props
+  tavilyQuery: string;
+  setTavilyQuery: (value: string) => void;
+  tavilyLoading: boolean;
+  showTavilyOptions: boolean;
+  setShowTavilyOptions: (show: boolean) => void;
+  tavilySearchDepth: TavilySearchDepth;
+  setTavilySearchDepth: (depth: TavilySearchDepth) => void;
+  tavilyMaxResults: number;
+  setTavilyMaxResults: (num: number) => void;
+  tavilyIncludeDomains: string;
+  setTavilyIncludeDomains: (domains: string) => void;
+  tavilyExcludeDomains: string;
+  setTavilyExcludeDomains: (domains: string) => void;
+  tavilyIncludeAnswer: boolean;
+  setTavilyIncludeAnswer: (value: boolean) => void;
+  tavilyIncludeImages: boolean;
+  setTavilyIncludeImages: (value: boolean) => void;
+  tavilyIncludeRawContent: boolean;
+  setTavilyIncludeRawContent: (value: boolean) => void;
+  tavilyTopic: TavilyTopic;
+  setTavilyTopic: (topic: TavilyTopic) => void;
+  onTavilySubmit: (e: React.FormEvent) => void;
   // Error clearing
   onProviderChange: () => void;
 }
@@ -157,6 +181,28 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
   parallelSearchQueries,
   setParallelSearchQueries,
   onParallelSubmit,
+  tavilyQuery,
+  setTavilyQuery,
+  tavilyLoading,
+  showTavilyOptions,
+  setShowTavilyOptions,
+  tavilySearchDepth,
+  setTavilySearchDepth,
+  tavilyMaxResults,
+  setTavilyMaxResults,
+  tavilyIncludeDomains,
+  setTavilyIncludeDomains,
+  tavilyExcludeDomains,
+  setTavilyExcludeDomains,
+  tavilyIncludeAnswer,
+  setTavilyIncludeAnswer,
+  tavilyIncludeImages,
+  setTavilyIncludeImages,
+  tavilyIncludeRawContent,
+  setTavilyIncludeRawContent,
+  tavilyTopic,
+  setTavilyTopic,
+  onTavilySubmit,
   onProviderChange
 }) => {
   return (
@@ -260,6 +306,35 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
               LLM-optimized search
             </p>
           </label>
+          <label className={`flex-1 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+            searchProvider === 'tavily'
+              ? isDarkMode
+                ? 'bg-blue-900/30 border-blue-500'
+                : 'bg-blue-50 border-blue-500'
+              : isDarkMode
+                ? 'bg-gray-600 border-gray-500 hover:border-gray-400'
+                : 'bg-white border-gray-300 hover:border-gray-400'
+          }`}>
+            <div className="flex items-center">
+              <input
+                type="radio"
+                className="form-radio text-blue-500"
+                name="searchProvider"
+                value="tavily"
+                checked={searchProvider === 'tavily'}
+                onChange={() => {
+                  setSearchProvider('tavily');
+                  onProviderChange();
+                }}
+              />
+              <span className={`ml-3 font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                Tavily
+              </span>
+            </div>
+            <p className={`text-xs mt-1 ml-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              AI-optimized search
+            </p>
+          </label>
         </div>
       </div>
 
@@ -325,7 +400,7 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
           isDarkMode={isDarkMode}
           onSubmit={onLinkupSubmit}
         />
-      ) : (
+      ) : searchProvider === 'parallel' ? (
         <ParallelSearchForm
           objective={parallelObjective}
           setObjective={setParallelObjective}
@@ -340,6 +415,32 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
           setSearchQueries={setParallelSearchQueries}
           isDarkMode={isDarkMode}
           onSubmit={onParallelSubmit}
+        />
+      ) : (
+        <TavilySearchForm
+          query={tavilyQuery}
+          setQuery={setTavilyQuery}
+          loading={tavilyLoading}
+          showOptions={showTavilyOptions}
+          setShowOptions={setShowTavilyOptions}
+          searchDepth={tavilySearchDepth}
+          setSearchDepth={setTavilySearchDepth}
+          maxResults={tavilyMaxResults}
+          setMaxResults={setTavilyMaxResults}
+          includeDomains={tavilyIncludeDomains}
+          setIncludeDomains={setTavilyIncludeDomains}
+          excludeDomains={tavilyExcludeDomains}
+          setExcludeDomains={setTavilyExcludeDomains}
+          includeAnswer={tavilyIncludeAnswer}
+          setIncludeAnswer={setTavilyIncludeAnswer}
+          includeImages={tavilyIncludeImages}
+          setIncludeImages={setTavilyIncludeImages}
+          includeRawContent={tavilyIncludeRawContent}
+          setIncludeRawContent={setTavilyIncludeRawContent}
+          topic={tavilyTopic}
+          setTopic={setTavilyTopic}
+          isDarkMode={isDarkMode}
+          onSubmit={onTavilySubmit}
         />
       )}
     </div>

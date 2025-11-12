@@ -5,6 +5,7 @@ import { checkFactWithPerplexity, checkPerplexityApiHealth } from './services/pe
 import { searchWithExa, checkExaApiHealth } from './services/exaApi';
 import { searchWithLinkup, checkLinkupApiHealth } from './services/linkupApi';
 import { searchWithParallel, checkParallelApiHealth } from './services/parallelApi';
+import { searchWithTavily, checkTavilyApiHealth } from './services/tavilyApi';
 import { sessionDb, factCheckDb, exaSearchDb } from './services/database';
 import { CONFIG } from './config/constants';
 import { logger } from './utils/logger';
@@ -595,6 +596,107 @@ app.post('/api/parallel-search', async (req, res) => {
   }
 });
 
+// Tavily search endpoint
+interface TavilySearchRequest {
+  query: string;
+  searchDepth?: 'basic' | 'advanced';
+  maxResults?: number;
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  includeAnswer?: boolean;
+  includeImages?: boolean;
+  includeRawContent?: boolean;
+  topic?: 'general' | 'news';
+}
+
+app.post('/api/tavily-search', async (req, res) => {
+  try {
+    const {
+      query,
+      searchDepth,
+      maxResults,
+      includeDomains,
+      excludeDomains,
+      includeAnswer,
+      includeImages,
+      includeRawContent,
+      topic
+    } = req.body as TavilySearchRequest;
+
+    // Validate query
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Query is required and must be a non-empty string'
+      });
+    }
+
+    if (query.length > 1000) {
+      return res.status(400).json({
+        error: 'Query must be 1000 characters or less'
+      });
+    }
+
+    // Validate domains if provided
+    if (includeDomains) {
+      validateSearchDomains(includeDomains);
+    }
+    if (excludeDomains) {
+      validateSearchDomains(excludeDomains);
+    }
+
+    const searchOptions = {
+      searchDepth: searchDepth || 'basic',
+      maxResults: maxResults || 10,
+      includeDomains,
+      excludeDomains,
+      includeAnswer: includeAnswer || false,
+      includeImages: includeImages || false,
+      includeRawContent: includeRawContent || false,
+      topic: topic || 'general'
+    };
+
+    const result = await searchWithTavily(query, searchOptions);
+    
+    // Save to database
+    try {
+      const session = sessionDb.create('exa-search', query); // Using exa-search type for now
+      exaSearchDb.save(session.id, {
+        searchType: 'tavily',
+        results: result.results
+      });
+    } catch (dbError) {
+      logger.error('Failed to save Tavily search result to database:', dbError);
+      // Don't fail the request if database save fails
+    }
+    
+    res.json({
+      success: true,
+      query,
+      results: result.results,
+      answer: result.answer,
+      responseTime: result.responseTime,
+      totalResults: result.results.length
+    });
+  } catch (error) {
+    logger.error('Tavily search error:', error);
+
+    // Log detailed error information for debugging
+    if (error instanceof Error) {
+      logger.error('Error message:', error.message);
+      logger.error('Error stack:', error.stack);
+    }
+
+    // Return more helpful error response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const statusCode = error instanceof Error && 'statusCode' in error ? (error as any).statusCode : 500;
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      details: 'Failed to perform Tavily search. Please try again or adjust your search parameters.'
+    });
+  }
+});
+
 // Get all sessions endpoint
 app.get('/api/sessions', async (req, res) => {
   try {
@@ -684,18 +786,20 @@ app.delete('/api/sessions/:id', async (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const [perplexityHealth, exaHealth, linkupHealth] = await Promise.allSettled([
+    const [perplexityHealth, exaHealth, linkupHealth, tavilyHealth] = await Promise.allSettled([
       checkPerplexityApiHealth(),
       checkExaApiHealth(),
-      checkLinkupApiHealth()
+      checkLinkupApiHealth(),
+      checkTavilyApiHealth()
     ]);
 
     const perplexityConnected = perplexityHealth.status === 'fulfilled' && perplexityHealth.value;
     const exaConnected = exaHealth.status === 'fulfilled' && exaHealth.value;
     const linkupConnected = linkupHealth.status === 'fulfilled' && linkupHealth.value;
+    const tavilyConnected = tavilyHealth.status === 'fulfilled' && tavilyHealth.value;
 
     res.json({ 
-      status: (perplexityConnected || exaConnected || linkupConnected) ? 'ok' : 'error',
+      status: (perplexityConnected || exaConnected || linkupConnected || tavilyConnected) ? 'ok' : 'error',
       apis: {
         perplexity: {
           configured: !!process.env.PERPLEXITY_API_KEY,
@@ -708,6 +812,10 @@ app.get('/health', async (req, res) => {
         linkup: {
           configured: !!process.env.LINKUP_API_KEY,
           connected: linkupConnected
+        },
+        tavily: {
+          configured: !!process.env.TAVILY_API_KEY,
+          connected: tavilyConnected
         }
       },
       models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro']
@@ -726,6 +834,10 @@ app.get('/health', async (req, res) => {
         },
         linkup: {
           configured: !!process.env.LINKUP_API_KEY,
+          connected: false
+        },
+        tavily: {
+          configured: !!process.env.TAVILY_API_KEY,
           connected: false
         }
       },
