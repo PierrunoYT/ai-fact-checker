@@ -46,3 +46,9 @@ Thumbs.db
 
 # Vite
 .vite/
+
+# Database
+backend/data/
+*.db
+*.db-shm
+*.db-wal

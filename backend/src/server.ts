@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { checkFactWithPerplexity, checkPerplexityApiHealth } from './services/perplexityApi';
 import { searchWithExa, checkExaApiHealth } from './services/exaApi';
+import { sessionDb, factCheckDb, exaSearchDb } from './services/database';
 import { CONFIG } from './config/constants';
 import { logger } from './utils/logger';
 import {
@@ -244,6 +245,24 @@ app.post('/api/check-fact', validateFactCheckRequest, async (req, res) => {
       }
     } else {
       const result = await checkFactWithPerplexity(statement, options);
+      
+      // Save to database
+      try {
+        const session = sessionDb.create('fact-check', statement);
+        factCheckDb.save(session.id, {
+          isFactual: result.isFactual,
+          confidence: result.confidence,
+          explanation: result.explanation,
+          thinking: result.thinking,
+          model: options.model,
+          usage: result.usage,
+          citations: result.citations
+        });
+      } catch (dbError) {
+        logger.error('Failed to save fact check result to database:', dbError);
+        // Don't fail the request if database save fails
+      }
+      
       res.json(result);
     }
   } catch (error) {
@@ -341,6 +360,20 @@ app.post('/api/exa-search', async (req, res) => {
 
     const result = await searchWithExa(query, searchOptions);
     
+    // Save to database
+    try {
+      const session = sessionDb.create('exa-search', query);
+      exaSearchDb.save(session.id, {
+        searchType: result.searchType,
+        costDollars: result.costDollars,
+        requestId: result.requestId,
+        results: result.results
+      });
+    } catch (dbError) {
+      logger.error('Failed to save Exa search result to database:', dbError);
+      // Don't fail the request if database save fails
+    }
+    
     res.json({
       success: true,
       query,
@@ -366,6 +399,92 @@ app.post('/api/exa-search', async (req, res) => {
     res.status(statusCode).json({
       error: errorMessage,
       details: 'Failed to perform Exa search. Please try again or adjust your search parameters.'
+    });
+  }
+});
+
+// Get all sessions endpoint
+app.get('/api/sessions', async (req, res) => {
+  try {
+    const { type, limit = '50', offset = '0' } = req.query;
+    
+    const sessions = sessionDb.getAll(
+      parseInt(limit as string),
+      parseInt(offset as string),
+      type as 'fact-check' | 'exa-search' | undefined
+    );
+    
+    const total = sessionDb.count(type as 'fact-check' | 'exa-search' | undefined);
+    
+    res.json({
+      sessions,
+      total,
+      limit: parseInt(limit as string),
+      offset: parseInt(offset as string)
+    });
+  } catch (error) {
+    logger.error('Error fetching sessions:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
+});
+
+// Get session by ID with results
+app.get('/api/sessions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const session = sessionDb.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    let result = null;
+    
+    if (session.type === 'fact-check') {
+      const results = factCheckDb.getBySessionId(id);
+      if (results.length > 0) {
+        const latestResult = factCheckDb.getById(results[0].id);
+        result = latestResult;
+      }
+    } else if (session.type === 'exa-search') {
+      const results = exaSearchDb.getBySessionId(id);
+      if (results.length > 0) {
+        const latestResult = exaSearchDb.getById(results[0].id);
+        result = latestResult;
+      }
+    }
+    
+    res.json({
+      session,
+      result
+    });
+  } catch (error) {
+    logger.error('Error fetching session:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
+});
+
+// Delete session endpoint
+app.delete('/api/sessions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const session = sessionDb.getById(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    sessionDb.delete(id);
+    
+    res.json({ success: true, message: 'Session deleted successfully' });
+  } catch (error) {
+    logger.error('Error deleting session:', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
     });
   }
 });

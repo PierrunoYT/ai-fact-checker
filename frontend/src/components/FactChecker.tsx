@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { factCheckApi, type Citation, type FactCheckResponse, type PerplexityModel } from '../api/perplexityApi';
 import { exaApi } from '../api/exaApi';
+import { sessionsApi, type Session } from '../api/sessionsApi';
 import { ModelSelector } from './ModelSelector';
 import { AdvancedOptions } from './AdvancedOptions';
 import { ExaSearchOptions } from './ExaSearchOptions';
+import { SessionsHistory } from './SessionsHistory';
 import { validateStatement, validateDomainFilter } from '../utils/validation';
 import type { ExaSearchResponse, ExaSearchResult, ExaSearchType, ExaCategory } from '../types';
 
@@ -167,10 +169,74 @@ export const FactChecker: React.FC = () => {
     }
   };
 
+  const handleSelectSession = async (session: Session) => {
+    try {
+      const sessionData = await sessionsApi.getById(session.id);
+      
+      if (session.type === 'fact-check') {
+        setActiveTab('fact-check');
+        setStatement(session.query);
+        if (sessionData.result) {
+          const factCheckResult: FactCheckResponse = {
+            isFactual: sessionData.result.isFactual,
+            confidence: sessionData.result.confidence,
+            explanation: sessionData.result.explanation,
+            thinking: sessionData.result.thinking,
+            sources: sessionData.result.citations?.map(c => c.url) || [],
+            citations: sessionData.result.citations?.map(c => ({
+              id: c.citationId,
+              url: c.url,
+              title: c.title,
+              domain: c.domain,
+              snippet: c.snippet
+            })),
+            usage: sessionData.result.usage
+          };
+          setResult(factCheckResult);
+          if (sessionData.result.thinking) {
+            setThinking(sessionData.result.thinking);
+          }
+        }
+      } else if (session.type === 'exa-search') {
+        setActiveTab('web-search');
+        setExaQuery(session.query);
+        if (sessionData.result) {
+          const exaSearchResult: ExaSearchResponse = {
+            success: true,
+            query: session.query,
+            results: sessionData.result.items.map(item => ({
+              title: item.title,
+              url: item.url,
+              publishedDate: item.publishedDate,
+              author: item.author,
+              snippet: item.snippet,
+              text: item.text,
+              summary: item.summary,
+              highlights: item.highlights,
+              relevanceScore: item.relevanceScore
+            })),
+            searchType: sessionData.result.searchType,
+            costDollars: sessionData.result.costDollars,
+            requestId: sessionData.result.requestId,
+            totalResults: sessionData.result.totalResults
+          };
+          setExaResult(exaSearchResult);
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load session';
+      if (session.type === 'fact-check') {
+        setError(message);
+      } else {
+        setExaError(message);
+      }
+    }
+  };
+
   return (
-    <div className={`min-h-screen flex ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className={`h-screen flex ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Left Panel - Input */}
-      <div className={`w-1/2 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg flex flex-col`}>
+      <div className={`w-1/2 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg flex flex-col overflow-y-auto`}>
         {/* Header */}
         <div className="p-8 pb-0">
           <div className="flex items-center justify-between mb-6">
@@ -248,6 +314,12 @@ export const FactChecker: React.FC = () => {
 
         {activeTab === 'fact-check' ? (
           <form onSubmit={handleFactCheckSubmit} className="flex-1 flex flex-col p-8 pt-0">
+          <SessionsHistory
+            isDarkMode={isDarkMode}
+            onSelectSession={handleSelectSession}
+            activeTab="fact-check"
+          />
+
           <ModelSelector 
             model={model} 
             onModelChange={setModel} 
@@ -323,6 +395,12 @@ export const FactChecker: React.FC = () => {
         </form>
         ) : (
           <form onSubmit={handleExaSearchSubmit} className="flex-1 flex flex-col p-8 pt-0">
+            <SessionsHistory
+              isDarkMode={isDarkMode}
+              onSelectSession={handleSelectSession}
+              activeTab="exa-search"
+            />
+
             <div className="mb-4">
               <button
                 type="button"
@@ -408,7 +486,7 @@ export const FactChecker: React.FC = () => {
       </div>
 
       {/* Right Panel - Results */}
-      <div className={`flex-1 h-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} overflow-y-auto pt-16`}>
+      <div className={`flex-1 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} overflow-y-auto`}>
         <div className="p-8">
           {(error || exaError) && (
             <div className={`${isDarkMode ? 'bg-red-900/50' : 'bg-red-50'} border-l-4 border-red-500 rounded p-4 mb-6 animate-fade-in`}>

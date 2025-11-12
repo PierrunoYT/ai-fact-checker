@@ -53,6 +53,11 @@ export const CONFIG = {
       : ['http://localhost:5173', 'http://127.0.0.1:5173']
   },
   
+  // Database Configuration
+  DATABASE: {
+    PATH: process.env.DATABASE_PATH || './data/fact-checker.db'
+  },
+  
   // Validation
   VALIDATION: {
     MAX_STATEMENT_LENGTH: 10000,
