@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { checkFactWithPerplexity, checkPerplexityApiHealth } from './services/perplexityApi';
 import { searchWithExa, checkExaApiHealth } from './services/exaApi';
+import { searchWithLinkup, checkLinkupApiHealth } from './services/linkupApi';
 import { sessionDb, factCheckDb, exaSearchDb } from './services/database';
 import { CONFIG } from './config/constants';
 import { logger } from './utils/logger';
@@ -403,6 +404,121 @@ app.post('/api/exa-search', async (req, res) => {
   }
 });
 
+// Linkup search endpoint
+interface LinkupSearchRequest {
+  query: string;
+  depth?: 'standard' | 'deep';
+  outputType?: 'sourcedAnswer' | 'raw';
+  structuredOutputSchema?: any;
+  includeImages?: boolean;
+  fromDate?: string;
+  toDate?: string;
+  excludeDomains?: string[];
+  includeDomains?: string[];
+  includeInlineCitations?: boolean;
+  includeSources?: boolean;
+}
+
+app.post('/api/linkup-search', async (req, res) => {
+  try {
+    const {
+      query,
+      depth,
+      outputType,
+      structuredOutputSchema,
+      includeImages,
+      fromDate,
+      toDate,
+      excludeDomains,
+      includeDomains,
+      includeInlineCitations,
+      includeSources
+    } = req.body as LinkupSearchRequest;
+
+    // Validate query
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Query is required and must be a non-empty string'
+      });
+    }
+
+    if (query.length > 1000) {
+      return res.status(400).json({
+        error: 'Query must be 1000 characters or less'
+      });
+    }
+
+    // Validate domains if provided
+    if (includeDomains) {
+      validateSearchDomains(includeDomains);
+    }
+    if (excludeDomains) {
+      validateSearchDomains(excludeDomains);
+    }
+
+    // Validate dates if provided
+    if (fromDate) {
+      validateDateFormat(fromDate, 'fromDate');
+    }
+    if (toDate) {
+      validateDateFormat(toDate, 'toDate');
+    }
+
+    const searchOptions = {
+      depth: depth || 'standard',
+      outputType: outputType || 'sourcedAnswer',
+      structuredOutputSchema,
+      includeImages: includeImages || false,
+      fromDate,
+      toDate,
+      excludeDomains,
+      includeDomains,
+      includeInlineCitations: includeInlineCitations !== undefined ? includeInlineCitations : false,
+      includeSources: includeSources !== undefined ? includeSources : true
+    };
+
+    const result = await searchWithLinkup(query, searchOptions);
+    
+    // Save to database (using exa-search type for now, could add linkup-search type later)
+    try {
+      const session = sessionDb.create('exa-search', query); // TODO: Add 'linkup-search' type
+      exaSearchDb.save(session.id, {
+        searchType: 'linkup',
+        results: result.results
+      });
+    } catch (dbError) {
+      logger.error('Failed to save Linkup search result to database:', dbError);
+      // Don't fail the request if database save fails
+    }
+    
+    res.json({
+      success: true,
+      query,
+      results: result.results,
+      answer: result.answer,
+      sources: result.sources,
+      totalResults: result.results.length
+    });
+  } catch (error) {
+    logger.error('Linkup search error:', error);
+
+    // Log detailed error information for debugging
+    if (error instanceof Error) {
+      logger.error('Error message:', error.message);
+      logger.error('Error stack:', error.stack);
+    }
+
+    // Return more helpful error response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const statusCode = error instanceof Error && 'statusCode' in error ? (error as any).statusCode : 500;
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      details: 'Failed to perform Linkup search. Please try again or adjust your search parameters.'
+    });
+  }
+});
+
 // Get all sessions endpoint
 app.get('/api/sessions', async (req, res) => {
   try {
@@ -492,16 +608,18 @@ app.delete('/api/sessions/:id', async (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const [perplexityHealth, exaHealth] = await Promise.allSettled([
+    const [perplexityHealth, exaHealth, linkupHealth] = await Promise.allSettled([
       checkPerplexityApiHealth(),
-      checkExaApiHealth()
+      checkExaApiHealth(),
+      checkLinkupApiHealth()
     ]);
 
     const perplexityConnected = perplexityHealth.status === 'fulfilled' && perplexityHealth.value;
     const exaConnected = exaHealth.status === 'fulfilled' && exaHealth.value;
+    const linkupConnected = linkupHealth.status === 'fulfilled' && linkupHealth.value;
 
     res.json({ 
-      status: (perplexityConnected || exaConnected) ? 'ok' : 'error',
+      status: (perplexityConnected || exaConnected || linkupConnected) ? 'ok' : 'error',
       apis: {
         perplexity: {
           configured: !!process.env.PERPLEXITY_API_KEY,
@@ -510,6 +628,10 @@ app.get('/health', async (req, res) => {
         exa: {
           configured: !!process.env.EXA_API_KEY,
           connected: exaConnected
+        },
+        linkup: {
+          configured: !!process.env.LINKUP_API_KEY,
+          connected: linkupConnected
         }
       },
       models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro']
@@ -524,6 +646,10 @@ app.get('/health', async (req, res) => {
         },
         exa: {
           configured: !!process.env.EXA_API_KEY,
+          connected: false
+        },
+        linkup: {
+          configured: !!process.env.LINKUP_API_KEY,
           connected: false
         }
       },

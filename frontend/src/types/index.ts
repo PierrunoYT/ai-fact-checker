@@ -95,6 +95,51 @@ export interface ExaSearchResponse {
   totalResults: number;
 }
 
+// Linkup Search Types
+export type LinkupDepth = 'standard' | 'deep';
+export type LinkupOutputType = 'sourcedAnswer' | 'raw';
+
+export interface LinkupSearchRequest {
+  query: string;
+  depth?: LinkupDepth;
+  outputType?: LinkupOutputType;
+  structuredOutputSchema?: any;
+  includeImages?: boolean;
+  fromDate?: string;
+  toDate?: string;
+  excludeDomains?: string[];
+  includeDomains?: string[];
+  includeInlineCitations?: boolean;
+  includeSources?: boolean;
+}
+
+export interface LinkupSource {
+  name: string;
+  url: string;
+  snippet: string;
+}
+
+export interface LinkupSearchResult {
+  title: string;
+  url: string;
+  publishedDate?: string;
+  author?: string;
+  snippet?: string;
+  text?: string;
+  summary?: string;
+  highlights?: string[];
+  relevanceScore?: number;
+}
+
+export interface LinkupSearchResponse {
+  success: boolean;
+  query: string;
+  results: LinkupSearchResult[];
+  answer?: string;
+  sources?: LinkupSource[];
+  totalResults: number;
+}
+
 // Component Props Types
 export interface ModelSelectorProps {
   model: PerplexityModel;

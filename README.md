@@ -35,6 +35,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
 - npm v8+
 - Perplexity AI API key (required)
 - Exa AI API key (optional, for enhanced web search)
+- Linkup API key (optional, for web search functionality)
 
 ### Installation
 
@@ -54,9 +55,10 @@ A powerful fact-checking application that verifies statements using Perplexity A
    # Backend (.env)
    cd backend
    cp env.template .env
-   # Edit .env and add your API keys:
-   # - PERPLEXITY_API_KEY (required for fact-checking)
-   # - EXA_API_KEY (optional, for web search functionality)
+     # Edit .env and add your API keys:
+     # - PERPLEXITY_API_KEY (required for fact-checking)
+     # - EXA_API_KEY (optional, for web search functionality)
+     # - LINKUP_API_KEY (optional, for web search functionality)
 
    # Frontend (.env)
    cd ../frontend
@@ -102,6 +104,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
   - TypeScript
   - Perplexity AI API
   - Exa AI API (for web search)
+  - Linkup API (for web search)
 
 ## 📡 API Endpoints
 
@@ -149,6 +152,25 @@ Content-Type: application/json
   "getHighlights": boolean,
   "getContext": boolean,
   "contextMaxCharacters": number
+}
+```
+
+### Linkup Web Search
+```http
+POST /api/linkup-search
+Content-Type: application/json
+
+{
+  "query": string,
+  "depth": "standard" | "deep", // default: "standard"
+  "outputType": "sourcedAnswer" | "raw", // default: "sourcedAnswer"
+  "includeImages": boolean, // default: false
+  "fromDate": string, // YYYY-MM-DD or MM/DD/YYYY format
+  "toDate": string, // YYYY-MM-DD or MM/DD/YYYY format
+  "excludeDomains": string[],
+  "includeDomains": string[],
+  "includeInlineCitations": boolean, // default: false
+  "includeSources": boolean // default: true
 }
 ```
 

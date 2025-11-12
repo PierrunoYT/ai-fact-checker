@@ -6,6 +6,8 @@ export const CONFIG = {
   // API Configuration
   PERPLEXITY_API_URL: 'https://api.perplexity.ai/chat/completions',
   EXA_API_URL: 'https://api.exa.ai/search',
+  LINKUP_API_URL: 'https://api.linkup.so/v1/search',
+  LINKUP_CREDITS_URL: 'https://api.linkup.so/v1/credits/balance',
   
   // Timeout Configuration
   REQUEST_TIMEOUT: parseInt(process.env.API_TIMEOUT || '120000'), // 2 minutes
