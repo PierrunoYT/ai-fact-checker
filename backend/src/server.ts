@@ -259,6 +259,7 @@ app.post('/api/check-fact', validateFactCheckRequest, async (req, res) => {
           usage: result.usage,
           citations: result.citations
         });
+        logger.info(`Saved fact check session: ${session.id}`);
       } catch (dbError) {
         logger.error('Failed to save fact check result to database:', dbError);
         // Don't fail the request if database save fails
@@ -370,6 +371,7 @@ app.post('/api/exa-search', async (req, res) => {
         requestId: result.requestId,
         results: result.results
       });
+      logger.info(`Saved Exa search session: ${session.id}`);
     } catch (dbError) {
       logger.error('Failed to save Exa search result to database:', dbError);
       // Don't fail the request if database save fails
@@ -479,13 +481,14 @@ app.post('/api/linkup-search', async (req, res) => {
 
     const result = await searchWithLinkup(query, searchOptions);
     
-    // Save to database (using exa-search type for now, could add linkup-search type later)
+    // Save to database
     try {
-      const session = sessionDb.create('exa-search', query); // TODO: Add 'linkup-search' type
+      const session = sessionDb.create('linkup-search', query);
       exaSearchDb.save(session.id, {
         searchType: 'linkup',
         results: result.results
       });
+      logger.info(`Saved Linkup search session: ${session.id}`);
     } catch (dbError) {
       logger.error('Failed to save Linkup search result to database:', dbError);
       // Don't fail the request if database save fails
@@ -559,11 +562,12 @@ app.post('/api/parallel-search', async (req, res) => {
     
     // Save to database
     try {
-      const session = sessionDb.create('exa-search', objective); // Using exa-search type for now
+      const session = sessionDb.create('parallel-search', objective);
       exaSearchDb.save(session.id, {
         searchType: 'parallel',
         results: result.results
       });
+      logger.info(`Saved Parallel search session: ${session.id}`);
     } catch (dbError) {
       logger.error('Failed to save Parallel search result to database:', dbError);
       // Don't fail the request if database save fails
@@ -659,11 +663,12 @@ app.post('/api/tavily-search', async (req, res) => {
     
     // Save to database
     try {
-      const session = sessionDb.create('exa-search', query); // Using exa-search type for now
+      const session = sessionDb.create('tavily-search', query);
       exaSearchDb.save(session.id, {
         searchType: 'tavily',
         results: result.results
       });
+      logger.info(`Saved Tavily search session: ${session.id}`);
     } catch (dbError) {
       logger.error('Failed to save Tavily search result to database:', dbError);
       // Don't fail the request if database save fails
@@ -705,10 +710,10 @@ app.get('/api/sessions', async (req, res) => {
     const sessions = sessionDb.getAll(
       parseInt(limit as string),
       parseInt(offset as string),
-      type as 'fact-check' | 'exa-search' | undefined
+      type as 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | undefined
     );
     
-    const total = sessionDb.count(type as 'fact-check' | 'exa-search' | undefined);
+    const total = sessionDb.count(type as 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | undefined);
     
     res.json({
       sessions,
@@ -742,7 +747,8 @@ app.get('/api/sessions/:id', async (req, res) => {
         const latestResult = factCheckDb.getById(results[0].id);
         result = latestResult;
       }
-    } else if (session.type === 'exa-search') {
+    } else if (session.type === 'exa-search' || session.type === 'linkup-search' || session.type === 'parallel-search' || session.type === 'tavily-search') {
+      // All web search types use the exaSearchDb (which stores all search results)
       const results = exaSearchDb.getBySessionId(id);
       if (results.length > 0) {
         const latestResult = exaSearchDb.getById(results[0].id);
