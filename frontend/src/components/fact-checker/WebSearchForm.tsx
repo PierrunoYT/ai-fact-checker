@@ -245,7 +245,7 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
               </span>
             </div>
             <p className={`text-xs mt-1 ml-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Neural & keyword search
+              Multi-mode web search
             </p>
           </label>
           <label className={`flex-1 p-3 rounded-lg border-2 cursor-pointer transition-all ${

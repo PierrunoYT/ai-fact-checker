@@ -5,9 +5,27 @@ import { logger } from '../utils/logger';
 
 dotenv.config();
 
+type ExaSearchType =
+  | 'auto'
+  | 'neural'
+  | 'fast'
+  | 'deep'
+  | 'deep-reasoning'
+  | 'deep-max'
+  | 'instant';
+
+type ExaCategory =
+  | 'company'
+  | 'research paper'
+  | 'news'
+  | 'tweet'
+  | 'personal site'
+  | 'financial report'
+  | 'people';
+
 interface ExaSearchRequest {
   query: string;
-  type?: 'neural' | 'keyword' | 'auto' | 'fast';
+  type?: ExaSearchType;
   numResults?: number;
   includeDomains?: string[];
   excludeDomains?: string[];
@@ -15,7 +33,7 @@ interface ExaSearchRequest {
   endPublishedDate?: string; // ISO 8601 format
   startCrawlDate?: string; // ISO 8601 format
   endCrawlDate?: string; // ISO 8601 format
-  category?: string;
+  category?: ExaCategory;
   userLocation?: string;
   includeText?: string[];
   excludeText?: string[];
@@ -35,7 +53,6 @@ interface ExaSearchRequest {
     };
   };
   moderation?: boolean;
-  context?: boolean;
 }
 
 interface ExaSearchResult {
@@ -54,29 +71,19 @@ interface ExaSearchResult {
 }
 
 interface ExaSearchResponse {
-  requestId: string;
-  resolvedSearchType: 'neural' | 'keyword';
-  results: ExaSearchResult[];
-  searchType: 'auto' | 'neural' | 'keyword' | 'fast';
+  requestId?: string;
+  resolvedSearchType?: ExaSearchType | string;
+  results?: ExaSearchResult[];
+  searchType?: ExaSearchType | string;
   context?: string;
-  costDollars?: {
-    total: number;
-    breakDown: Array<{
-      search: number;
-      contents: number;
-      breakdown: {
-        keywordSearch: number;
-        neuralSearch: number;
-        contentText: number;
-        contentHighlight: number;
-        contentSummary: number;
-      };
-    }>;
+  costDollars?: number | {
+    total?: number;
+    [key: string]: unknown;
   };
 }
 
 interface ExaSearchOptions {
-  type?: 'neural' | 'keyword' | 'auto' | 'fast';
+  type?: ExaSearchType;
   numResults?: number;
   includeDomains?: string[];
   excludeDomains?: string[];
@@ -84,7 +91,7 @@ interface ExaSearchOptions {
   endPublishedDate?: string;
   startCrawlDate?: string;
   endCrawlDate?: string;
-  category?: string;
+  category?: ExaCategory;
   userLocation?: string;
   includeText?: string[];
   excludeText?: string[];
@@ -210,6 +217,48 @@ function createExaSearchRequest(
   return request;
 }
 
+function extractCostDollars(costDollars: ExaSearchResponse['costDollars']): number | undefined {
+  if (typeof costDollars === 'number') {
+    return costDollars;
+  }
+
+  if (costDollars && typeof costDollars.total === 'number') {
+    return costDollars.total;
+  }
+
+  return undefined;
+}
+
+function extractExaErrorMessage(errorData: unknown): string | undefined {
+  if (typeof errorData === 'string') {
+    return errorData;
+  }
+
+  if (!errorData || typeof errorData !== 'object') {
+    return undefined;
+  }
+
+  const maybeObject = errorData as Record<string, unknown>;
+  const topLevel = maybeObject.error;
+
+  if (typeof topLevel === 'string') {
+    return topLevel;
+  }
+
+  if (topLevel && typeof topLevel === 'object') {
+    const nestedMessage = (topLevel as Record<string, unknown>).message;
+    if (typeof nestedMessage === 'string') {
+      return nestedMessage;
+    }
+  }
+
+  if (typeof maybeObject.message === 'string') {
+    return maybeObject.message;
+  }
+
+  return undefined;
+}
+
 /**
  * Main function to search using Exa API
  */
@@ -256,8 +305,10 @@ export async function searchWithExa(
       resultsCount: response.data.results?.length || 0
     });
 
+    const exaResults = Array.isArray(response.data.results) ? response.data.results : [];
+
     // Transform Exa results to our FactCheckSearchResult format
-    const transformedResults: FactCheckSearchResult[] = response.data.results.map((result, index) => ({
+    const transformedResults: FactCheckSearchResult[] = exaResults.map((result) => ({
       title: result.title,
       url: result.url,
       publishedDate: result.publishedDate,
@@ -271,8 +322,8 @@ export async function searchWithExa(
 
     return {
       results: transformedResults,
-      searchType: response.data.resolvedSearchType || response.data.searchType || 'auto',
-      costDollars: response.data.costDollars?.total,
+      searchType: response.data.resolvedSearchType || response.data.searchType || options.type || 'auto',
+      costDollars: extractCostDollars(response.data.costDollars),
       requestId: response.data.requestId
     };
   } catch (error) {
@@ -291,8 +342,11 @@ export async function searchWithExa(
         throw new Error('Exa API authentication failed. Please check your API key.');
       } else if (error.response?.status === 429) {
         throw new Error('Exa API rate limit exceeded. Please try again later.');
-      } else if (error.response?.data?.error) {
-        throw new Error(`Exa API error: ${error.response.data.error}`);
+      }
+
+      const exaErrorMessage = extractExaErrorMessage(error.response?.data);
+      if (exaErrorMessage) {
+        throw new Error(`Exa API error: ${exaErrorMessage}`);
       }
     }
 

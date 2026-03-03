@@ -193,13 +193,13 @@ Content-Type: application/json
 
 {
   "query": string,
-  "type": "neural" | "keyword" | "auto" | "fast",
+  "type": "auto" | "neural" | "fast" | "deep" | "deep-reasoning" | "deep-max" | "instant",
   "numResults": number, // 1-100, default: 10
   "includeDomains": string[],
   "excludeDomains": string[],
   "startPublishedDate": string, // ISO 8601 or MM/DD/YYYY format
   "endPublishedDate": string, // ISO 8601 or MM/DD/YYYY format
-  "category": "company" | "research paper" | "news" | "pdf" | "github" | "tweet" | "personal site" | "linkedin profile" | "financial report",
+  "category": "company" | "research paper" | "news" | "tweet" | "personal site" | "financial report" | "people",
   "userLocation": string, // ISO country code (e.g., "US")
   "getText": boolean,
   "getSummary": boolean,

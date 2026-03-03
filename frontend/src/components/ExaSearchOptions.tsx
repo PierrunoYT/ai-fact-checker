@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ExaSearchType, ExaCategory } from '../types';
-import { formatDateForInput, formatDateForApi, formatDateObjectForApi, validateDomainFilter } from '../utils/validation';
+import { formatDateForInput, formatDateForApi, validateDomainFilter } from '../utils/validation';
 
 interface ExaSearchOptionsProps {
   searchType: ExaSearchType;
@@ -95,12 +95,10 @@ export const ExaSearchOptions: React.FC<ExaSearchOptionsProps> = ({
     'company',
     'research paper',
     'news',
-    'pdf',
-    'github',
     'tweet',
     'personal site',
-    'linkedin profile',
-    'financial report'
+    'financial report',
+    'people'
   ];
 
   return (
@@ -111,7 +109,7 @@ export const ExaSearchOptions: React.FC<ExaSearchOptionsProps> = ({
           Search Type
         </label>
         <div className="flex flex-wrap gap-4">
-          {(['neural', 'keyword', 'auto', 'fast'] as ExaSearchType[]).map((type) => (
+          {(['auto', 'neural', 'fast', 'deep', 'deep-reasoning', 'deep-max', 'instant'] as ExaSearchType[]).map((type) => (
             <label key={type} className="inline-flex items-center">
               <input
                 type="radio"
@@ -123,13 +121,13 @@ export const ExaSearchOptions: React.FC<ExaSearchOptionsProps> = ({
                 aria-label={`Search type: ${type}`}
               />
               <span className={`ml-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} capitalize`}>
-                {type}
+                {type.replace(/-/g, ' ')}
               </span>
             </label>
           ))}
         </div>
         <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          neural: Embeddings-based (up to 100 results) | keyword: Google-like SERP (up to 10) | auto: Combines both | fast: Streamlined
+          auto/neural/fast for standard search, deep modes for expanded retrieval, instant for lowest latency.
         </p>
       </div>
 
@@ -141,9 +139,9 @@ export const ExaSearchOptions: React.FC<ExaSearchOptionsProps> = ({
         <input
           type="number"
           min="1"
-          max={searchType === 'keyword' ? 10 : 100}
+          max={100}
           value={numResults}
-          onChange={(e) => setNumResults(Math.max(1, Math.min(searchType === 'keyword' ? 10 : 100, parseInt(e.target.value) || 1)))}
+          onChange={(e) => setNumResults(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
           className={`w-full p-2 text-sm rounded-md border ${
             isDarkMode
               ? 'bg-gray-600 border-gray-500 text-white'
@@ -152,7 +150,7 @@ export const ExaSearchOptions: React.FC<ExaSearchOptionsProps> = ({
           aria-label="Number of results"
         />
         <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          Max {searchType === 'keyword' ? 10 : 100} results for {searchType} search
+          Max 100 results per Exa query
         </p>
       </div>
 
