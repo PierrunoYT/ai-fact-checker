@@ -53,8 +53,8 @@ export type SearchRecency = 'month' | 'week' | 'day' | 'hour';
 export type SearchContextSize = 'low' | 'medium' | 'high';
 
 // Exa Search Types
-export type ExaSearchType = 'neural' | 'keyword' | 'auto' | 'fast';
-export type ExaCategory = 'company' | 'research paper' | 'news' | 'pdf' | 'github' | 'tweet' | 'personal site' | 'linkedin profile' | 'financial report';
+export type ExaSearchType = 'auto' | 'neural' | 'fast' | 'deep' | 'deep-reasoning' | 'deep-max' | 'instant';
+export type ExaCategory = 'company' | 'research paper' | 'news' | 'tweet' | 'personal site' | 'financial report' | 'people';
 
 export interface ExaSearchRequest {
   query: string;

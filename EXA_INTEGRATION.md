@@ -61,7 +61,7 @@ Performs a web search using Exa AI.
 ```typescript
 {
   query: string;                    // Required: Search query
-  type?: 'neural' | 'keyword' | 'auto' | 'fast';  // Search type
+  type?: 'auto' | 'neural' | 'fast' | 'deep' | 'deep-reasoning' | 'deep-max' | 'instant';  // Search type
   numResults?: number;              // 1-100, default: 10
   includeDomains?: string[];        // Filter to specific domains
   excludeDomains?: string[];        // Exclude specific domains
@@ -134,10 +134,13 @@ Get your API key from: https://dashboard.exa.ai/api-keys
 ## Features
 
 ### Search Types
-- **neural**: Embeddings-based search (up to 100 results)
-- **keyword**: Google-like SERP (up to 10 results)
 - **auto**: Intelligently combines both (default)
+- **neural**: Embeddings-based search
 - **fast**: Streamlined versions
+- **deep**: Expanded retrieval with query expansion
+- **deep-reasoning**: Deep search with stronger reasoning
+- **deep-max**: Maximum-effort deep search
+- **instant**: Lowest-latency search
 
 ### Content Retrieval Options
 - **Text**: Full page text in markdown format
@@ -148,7 +151,7 @@ Get your API key from: https://dashboard.exa.ai/api-keys
 ### Filtering Options
 - Domain inclusion/exclusion
 - Date range filtering (published date or crawl date)
-- Category filtering (company, research paper, news, pdf, etc.)
+- Category filtering (company, research paper, news, tweet, personal site, financial report, people)
 - Geographic location filtering
 - Text content filtering
 

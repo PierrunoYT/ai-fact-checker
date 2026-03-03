@@ -279,15 +279,100 @@ app.post('/api/check-fact', validateFactCheckRequest, async (req, res) => {
 });
 
 // Exa search endpoint
+type ExaSearchType =
+  | 'auto'
+  | 'neural'
+  | 'fast'
+  | 'deep'
+  | 'deep-reasoning'
+  | 'deep-max'
+  | 'instant';
+
+type ExaCategory =
+  | 'company'
+  | 'research paper'
+  | 'news'
+  | 'tweet'
+  | 'personal site'
+  | 'financial report'
+  | 'people';
+
+const VALID_EXA_SEARCH_TYPES: ExaSearchType[] = [
+  'auto',
+  'neural',
+  'fast',
+  'deep',
+  'deep-reasoning',
+  'deep-max',
+  'instant'
+];
+
+const VALID_EXA_CATEGORIES: ExaCategory[] = [
+  'company',
+  'research paper',
+  'news',
+  'tweet',
+  'personal site',
+  'financial report',
+  'people'
+];
+
+const LEGACY_EXA_SEARCH_TYPE_MAP: Record<string, ExaSearchType> = {
+  keyword: 'auto'
+};
+
+const LEGACY_EXA_CATEGORY_MAP: Record<string, ExaCategory | undefined> = {
+  'linkedin profile': 'people',
+  pdf: undefined,
+  github: undefined
+};
+
+function normalizeExaSearchType(type?: string): ExaSearchType | undefined {
+  if (!type) return undefined;
+
+  const normalizedType = type.trim().toLowerCase();
+  const mappedType = LEGACY_EXA_SEARCH_TYPE_MAP[normalizedType];
+  if (mappedType) {
+    return mappedType;
+  }
+
+  if (VALID_EXA_SEARCH_TYPES.includes(normalizedType as ExaSearchType)) {
+    return normalizedType as ExaSearchType;
+  }
+
+  throw new ValidationError(
+    `Invalid Exa search type. Must be one of: ${VALID_EXA_SEARCH_TYPES.join(', ')}`,
+    'type'
+  );
+}
+
+function normalizeExaCategory(category?: string): ExaCategory | undefined {
+  if (!category) return undefined;
+
+  const normalizedCategory = category.trim().toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(LEGACY_EXA_CATEGORY_MAP, normalizedCategory)) {
+    return LEGACY_EXA_CATEGORY_MAP[normalizedCategory];
+  }
+
+  if (VALID_EXA_CATEGORIES.includes(normalizedCategory as ExaCategory)) {
+    return normalizedCategory as ExaCategory;
+  }
+
+  throw new ValidationError(
+    `Invalid Exa category. Must be one of: ${VALID_EXA_CATEGORIES.join(', ')}`,
+    'category'
+  );
+}
+
 interface ExaSearchRequest {
   query: string;
-  type?: 'neural' | 'keyword' | 'auto' | 'fast';
+  type?: ExaSearchType | 'keyword';
   numResults?: number;
   includeDomains?: string[];
   excludeDomains?: string[];
   startPublishedDate?: string;
   endPublishedDate?: string;
-  category?: string;
+  category?: ExaCategory | 'pdf' | 'github' | 'linkedin profile';
   userLocation?: string;
   getText?: boolean;
   getSummary?: boolean;
@@ -314,6 +399,9 @@ app.post('/api/exa-search', async (req, res) => {
       getContext,
       contextMaxCharacters
     } = req.body as ExaSearchRequest;
+
+    const normalizedType = normalizeExaSearchType(type);
+    const normalizedCategory = normalizeExaCategory(category);
 
     // Validate query
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
@@ -344,14 +432,36 @@ app.post('/api/exa-search', async (req, res) => {
       validateDateFormat(endPublishedDate, 'endPublishedDate');
     }
 
+    if (numResults !== undefined) {
+      if (!Number.isInteger(numResults) || numResults < 1 || numResults > 100) {
+        throw new ValidationError('numResults must be an integer between 1 and 100', 'numResults');
+      }
+    }
+
+    if (contextMaxCharacters !== undefined) {
+      if (!Number.isInteger(contextMaxCharacters) || contextMaxCharacters < 100 || contextMaxCharacters > 50000) {
+        throw new ValidationError(
+          'contextMaxCharacters must be an integer between 100 and 50000',
+          'contextMaxCharacters'
+        );
+      }
+    }
+
+    if (type && normalizedType !== type) {
+      logger.warn(`Mapped legacy Exa search type "${type}" to "${normalizedType}"`);
+    }
+    if (category && normalizedCategory !== category) {
+      logger.warn(`Mapped/deprecated Exa category "${category}" to "${normalizedCategory ?? 'none'}"`);
+    }
+
     const searchOptions = {
-      type,
-      numResults: numResults || 10,
+      type: normalizedType,
+      numResults: numResults ?? 10,
       includeDomains,
       excludeDomains,
       startPublishedDate,
       endPublishedDate,
-      category,
+      category: normalizedCategory,
       userLocation,
       getText: getText || false,
       getSummary: getSummary || false,
@@ -398,6 +508,13 @@ app.post('/api/exa-search', async (req, res) => {
     // Return more helpful error response
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     const statusCode = error instanceof Error && 'statusCode' in error ? (error as any).statusCode : 500;
+
+    if (error instanceof ValidationError) {
+      return res.status(400).json({
+        error: error.message,
+        field: error.field
+      });
+    }
 
     res.status(statusCode).json({
       error: errorMessage,
