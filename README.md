@@ -141,7 +141,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
 - **React 18** with TypeScript
 - **Vite** for fast development and building
 - **Tailwind CSS** for styling
-- **React Router** for navigation
+- **Tab-based navigation** with React state (no URL routing)
 - **Axios** for API communication with retry logic
 - **Custom Hooks** for state management and API calls
 
@@ -413,27 +413,31 @@ ai-fact-checker/
 ```
 
 ### Available Scripts
+
 ```bash
-# Development
-npm run dev              # Start both servers
-npm run build           # Build for production
-npm run test            # Run all tests
-npm run lint            # Lint all code
-npm run format          # Format all code
+# Root (from project root)
+npm run dev              # Start both frontend and backend servers concurrently
+npm run install-all      # Install dependencies for both frontend and backend
 
 # Frontend only
 cd frontend
-npm run dev             # Start frontend dev server
-npm run build           # Build frontend
-npm run test            # Run frontend tests
-npm run preview         # Preview production build
+npm run dev              # Start Vite dev server (port 5173)
+npm run build            # Type-check and build for production
+npm run preview          # Preview production build
+npm run test             # Run tests with Vitest
+npm run test:coverage    # Run tests with coverage report
+npm run lint             # Lint TypeScript/TSX files
+npm run format           # Format source files with Prettier
 
 # Backend only
 cd backend
-npm run dev             # Start backend dev server
-npm run build           # Build backend
-npm run test            # Run backend tests
-npm run start           # Start production server
+npm run dev              # Start backend with ts-node-dev (hot reload)
+npm run build            # Compile TypeScript to dist/
+npm start                # Start compiled production server
+npm run test             # Run tests with Jest
+npm run test:coverage    # Run tests with coverage report
+npm run lint             # Lint TypeScript files
+npm run format           # Format source files with Prettier
 ```
 
 ### Code Quality
