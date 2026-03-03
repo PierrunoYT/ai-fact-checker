@@ -4,10 +4,11 @@ import { ExaSearchForm } from './ExaSearchForm';
 import { LinkupSearchForm } from './LinkupSearchForm';
 import { ParallelSearchForm } from './ParallelSearchForm';
 import { TavilySearchForm } from './TavilySearchForm';
-import type { ExaSearchType, ExaCategory, LinkupDepth, LinkupOutputType, TavilySearchDepth, TavilyTopic } from '../../types';
+import { ValyuSearchForm } from './ValyuSearchForm';
+import type { ExaSearchType, ExaCategory, LinkupDepth, LinkupOutputType, TavilySearchDepth, TavilyTopic, ValyuSearchType, ValyuResponseLength } from '../../types';
 import type { Session } from '../../api/sessionsApi';
 
-type SearchProvider = 'exa' | 'linkup' | 'parallel' | 'tavily';
+type SearchProvider = 'exa' | 'linkup' | 'parallel' | 'tavily' | 'valyu';
 
 interface WebSearchFormProps {
   searchProvider: SearchProvider;
@@ -106,6 +107,33 @@ interface WebSearchFormProps {
   tavilyTopic: TavilyTopic;
   setTavilyTopic: (topic: TavilyTopic) => void;
   onTavilySubmit: (e: React.FormEvent) => void;
+  // Valyu props
+  valyuQuery: string;
+  setValyuQuery: (value: string) => void;
+  valyuLoading: boolean;
+  showValyuOptions: boolean;
+  setShowValyuOptions: (show: boolean) => void;
+  valyuSearchType: ValyuSearchType;
+  setValyuSearchType: (type: ValyuSearchType) => void;
+  valyuMaxNumResults: number;
+  setValyuMaxNumResults: (num: number) => void;
+  valyuRelevanceThreshold: number;
+  setValyuRelevanceThreshold: (value: number) => void;
+  valyuIncludedSources: string;
+  setValyuIncludedSources: (sources: string) => void;
+  valyuExcludedSources: string;
+  setValyuExcludedSources: (sources: string) => void;
+  valyuStartDate: string;
+  setValyuStartDate: (date: string) => void;
+  valyuEndDate: string;
+  setValyuEndDate: (date: string) => void;
+  valyuCountryCode: string;
+  setValyuCountryCode: (code: string) => void;
+  valyuResponseLength: ValyuResponseLength;
+  setValyuResponseLength: (length: ValyuResponseLength) => void;
+  valyuFastMode: boolean;
+  setValyuFastMode: (value: boolean) => void;
+  onValyuSubmit: (e: React.FormEvent) => void;
   // Error clearing
   onProviderChange: () => void;
 }
@@ -203,6 +231,32 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
   tavilyTopic,
   setTavilyTopic,
   onTavilySubmit,
+  valyuQuery,
+  setValyuQuery,
+  valyuLoading,
+  showValyuOptions,
+  setShowValyuOptions,
+  valyuSearchType,
+  setValyuSearchType,
+  valyuMaxNumResults,
+  setValyuMaxNumResults,
+  valyuRelevanceThreshold,
+  setValyuRelevanceThreshold,
+  valyuIncludedSources,
+  setValyuIncludedSources,
+  valyuExcludedSources,
+  setValyuExcludedSources,
+  valyuStartDate,
+  setValyuStartDate,
+  valyuEndDate,
+  setValyuEndDate,
+  valyuCountryCode,
+  setValyuCountryCode,
+  valyuResponseLength,
+  setValyuResponseLength,
+  valyuFastMode,
+  setValyuFastMode,
+  onValyuSubmit,
   onProviderChange
 }) => {
   return (
@@ -335,6 +389,35 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
               AI-optimized search
             </p>
           </label>
+          <label className={`flex-1 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+            searchProvider === 'valyu'
+              ? isDarkMode
+                ? 'bg-blue-900/30 border-blue-500'
+                : 'bg-blue-50 border-blue-500'
+              : isDarkMode
+                ? 'bg-gray-600 border-gray-500 hover:border-gray-400'
+                : 'bg-white border-gray-300 hover:border-gray-400'
+          }`}>
+            <div className="flex items-center">
+              <input
+                type="radio"
+                className="form-radio text-blue-500"
+                name="searchProvider"
+                value="valyu"
+                checked={searchProvider === 'valyu'}
+                onChange={() => {
+                  setSearchProvider('valyu');
+                  onProviderChange();
+                }}
+              />
+              <span className={`ml-3 font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                Valyu
+              </span>
+            </div>
+            <p className={`text-xs mt-1 ml-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Multi-source AI search
+            </p>
+          </label>
         </div>
       </div>
 
@@ -416,7 +499,7 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
           isDarkMode={isDarkMode}
           onSubmit={onParallelSubmit}
         />
-      ) : (
+      ) : searchProvider === 'tavily' ? (
         <TavilySearchForm
           query={tavilyQuery}
           setQuery={setTavilyQuery}
@@ -441,6 +524,36 @@ export const WebSearchForm: React.FC<WebSearchFormProps> = ({
           setTopic={setTavilyTopic}
           isDarkMode={isDarkMode}
           onSubmit={onTavilySubmit}
+        />
+      ) : (
+        <ValyuSearchForm
+          query={valyuQuery}
+          setQuery={setValyuQuery}
+          loading={valyuLoading}
+          showOptions={showValyuOptions}
+          setShowOptions={setShowValyuOptions}
+          searchType={valyuSearchType}
+          setSearchType={setValyuSearchType}
+          maxNumResults={valyuMaxNumResults}
+          setMaxNumResults={setValyuMaxNumResults}
+          relevanceThreshold={valyuRelevanceThreshold}
+          setRelevanceThreshold={setValyuRelevanceThreshold}
+          includedSources={valyuIncludedSources}
+          setIncludedSources={setValyuIncludedSources}
+          excludedSources={valyuExcludedSources}
+          setExcludedSources={setValyuExcludedSources}
+          startDate={valyuStartDate}
+          setStartDate={setValyuStartDate}
+          endDate={valyuEndDate}
+          setEndDate={setValyuEndDate}
+          countryCode={valyuCountryCode}
+          setCountryCode={setValyuCountryCode}
+          responseLength={valyuResponseLength}
+          setResponseLength={setValyuResponseLength}
+          fastMode={valyuFastMode}
+          setFastMode={setValyuFastMode}
+          isDarkMode={isDarkMode}
+          onSubmit={onValyuSubmit}
         />
       )}
     </div>

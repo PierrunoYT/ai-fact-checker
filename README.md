@@ -22,6 +22,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
 - **Linkup**: Deep web search with sourced answers and inline citations
 - **Parallel AI**: Parallel search with custom query optimization
 - **Tavily**: Fast search with answer generation and topic filtering
+- **Valyu**: Multi-source search across web, news, and 36+ proprietary datasets (PubMed, arXiv, SEC filings, patents, and more)
 
 ### 🔧 Advanced Search Options
 - Domain filtering to include/exclude specific websites
@@ -55,6 +56,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
 - **Optional**: Linkup API key (for Linkup web search)
 - **Optional**: Parallel AI API key (for Parallel web search)
 - **Optional**: Tavily API key (for Tavily web search)
+- **Optional**: Valyu API key (for Valyu web search)
 
 ### Installation
 
@@ -80,6 +82,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
    # - LINKUP_API_KEY (optional, for Linkup web search)
    # - PARALLEL_API_KEY (optional, for Parallel web search)
    # - TAVILY_API_KEY (optional, for Tavily web search)
+   # - VALYU_API_KEY (optional, for Valyu web search)
 
    # Frontend (.env)
    cd ../frontend
@@ -141,7 +144,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
 - **React 18** with TypeScript
 - **Vite** for fast development and building
 - **Tailwind CSS** for styling
-- **React Router** for navigation
+- **Tab-based navigation** with React state (no URL routing)
 - **Axios** for API communication with retry logic
 - **Custom Hooks** for state management and API calls
 
@@ -159,6 +162,7 @@ A powerful fact-checking application that verifies statements using Perplexity A
 - **Linkup** - Deep web search with sourced answers
 - **Parallel AI** - Parallel search optimization
 - **Tavily** - Fast search with answer generation
+- **Valyu** - Multi-source search across web, news, and proprietary datasets
 
 ## 📡 API Endpoints
 
@@ -300,6 +304,39 @@ Content-Type: application/json
 }
 ```
 
+### Valyu Web Search
+```http
+POST /api/valyu-search
+Content-Type: application/json
+
+{
+  "query": string,
+  "searchType": "web" | "proprietary" | "news" | "all", // default: "all"
+  "maxNumResults": number, // 1-20, default: 10
+  "relevanceThreshold": number, // 0.0-1.0, default: 0.5
+  "includedSources": string[], // e.g. ["pubmed", "arxiv"]
+  "excludedSources": string[],
+  "startDate": string, // YYYY-MM-DD format
+  "endDate": string, // YYYY-MM-DD format
+  "countryCode": string, // ISO 2-letter code, e.g. "US"
+  "responseLength": "short" | "medium" | "large" | "max", // default: "short"
+  "fastMode": boolean // default: false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "query": "search query",
+  "results": [...],
+  "txId": "transaction-id",
+  "totalDeductionDollars": 0.001,
+  "totalCharacters": 12500,
+  "totalResults": 10
+}
+```
+
 ### Sessions Management
 ```http
 # Get all sessions
@@ -337,6 +374,10 @@ GET /health
     "tavily": {
       "configured": true,
       "connected": true
+    },
+    "valyu": {
+      "configured": true,
+      "connected": true
     }
   },
   "models": ["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro"]
@@ -358,7 +399,8 @@ ai-fact-checker/
 │   │   │   ├── exaApi.ts           # Exa AI search integration
 │   │   │   ├── linkupApi.ts        # Linkup search integration
 │   │   │   ├── parallelApi.ts      # Parallel AI search integration
-│   │   │   └── tavilyApi.ts        # Tavily search integration
+│   │   │   ├── tavilyApi.ts        # Tavily search integration
+│   │   │   └── valyuApi.ts         # Valyu search integration
 │   │   ├── 📁 utils/               # Utility functions
 │   │   │   ├── logger.ts          # Request/error logging
 │   │   │   ├── validation.ts      # Input validation
@@ -377,6 +419,7 @@ ai-fact-checker/
 │   │   │   ├── linkupApi.ts       # Linkup search API
 │   │   │   ├── parallelApi.ts     # Parallel search API
 │   │   │   ├── tavilyApi.ts       # Tavily search API
+│   │   │   ├── valyuApi.ts        # Valyu search API
 │   │   │   └── sessionsApi.ts     # Session management API
 │   │   ├── 📁 components/          # React components
 │   │   │   ├── FactChecker.tsx    # Main application component
@@ -413,27 +456,31 @@ ai-fact-checker/
 ```
 
 ### Available Scripts
+
 ```bash
-# Development
-npm run dev              # Start both servers
-npm run build           # Build for production
-npm run test            # Run all tests
-npm run lint            # Lint all code
-npm run format          # Format all code
+# Root (from project root)
+npm run dev              # Start both frontend and backend servers concurrently
+npm run install-all      # Install dependencies for both frontend and backend
 
 # Frontend only
 cd frontend
-npm run dev             # Start frontend dev server
-npm run build           # Build frontend
-npm run test            # Run frontend tests
-npm run preview         # Preview production build
+npm run dev              # Start Vite dev server (port 5173)
+npm run build            # Type-check and build for production
+npm run preview          # Preview production build
+npm run test             # Run tests with Vitest
+npm run test:coverage    # Run tests with coverage report
+npm run lint             # Lint TypeScript/TSX files
+npm run format           # Format source files with Prettier
 
 # Backend only
 cd backend
-npm run dev             # Start backend dev server
-npm run build           # Build backend
-npm run test            # Run backend tests
-npm run start           # Start production server
+npm run dev              # Start backend with ts-node-dev (hot reload)
+npm run build            # Compile TypeScript to dist/
+npm start                # Start compiled production server
+npm run test             # Run tests with Jest
+npm run test:coverage    # Run tests with coverage report
+npm run lint             # Lint TypeScript files
+npm run format           # Format source files with Prettier
 ```
 
 ### Code Quality
@@ -454,6 +501,7 @@ npm run start           # Start production server
    LINKUP_API_KEY=your_linkup_api_key_here # Optional
    PARALLEL_API_KEY=your_parallel_api_key_here # Optional
    TAVILY_API_KEY=your_tavily_api_key_here # Optional
+   VALYU_API_KEY=your_valyu_api_key_here   # Optional
    ```
 
 2. **Port Conflicts**
@@ -489,6 +537,7 @@ MIT License - see [LICENSE](LICENSE)
 - [Linkup](https://linkup.so/) - Deep web search
 - [Parallel AI](https://parallel.ai/) - Parallel search optimization
 - [Tavily](https://tavily.com/) - Fast search with answer generation
+- [Valyu](https://valyu.ai/) - Multi-source AI search
 - [React](https://reactjs.org/) - UI framework
 - [Express](https://expressjs.com/) - Backend framework
 - [Tailwind CSS](https://tailwindcss.com/) - Styling framework

@@ -6,6 +6,7 @@ import { searchWithExa, checkExaApiHealth } from './services/exaApi';
 import { searchWithLinkup, checkLinkupApiHealth } from './services/linkupApi';
 import { searchWithParallel, checkParallelApiHealth } from './services/parallelApi';
 import { searchWithTavily, checkTavilyApiHealth } from './services/tavilyApi';
+import { searchWithValyu, checkValyuApiHealth } from './services/valyuApi';
 import { sessionDb, factCheckDb, exaSearchDb } from './services/database';
 import { CONFIG } from './config/constants';
 import { logger } from './utils/logger';
@@ -819,6 +820,113 @@ app.post('/api/tavily-search', async (req, res) => {
   }
 });
 
+// Valyu search endpoint
+interface ValyuSearchRequest {
+  query: string;
+  searchType?: 'web' | 'proprietary' | 'news' | 'all';
+  maxNumResults?: number;
+  maxPrice?: number;
+  relevanceThreshold?: number;
+  includedSources?: string[];
+  excludedSources?: string[];
+  startDate?: string;
+  endDate?: string;
+  countryCode?: string;
+  responseLength?: 'short' | 'medium' | 'large' | 'max';
+  fastMode?: boolean;
+}
+
+app.post('/api/valyu-search', async (req, res) => {
+  try {
+    const {
+      query,
+      searchType,
+      maxNumResults,
+      maxPrice,
+      relevanceThreshold,
+      includedSources,
+      excludedSources,
+      startDate,
+      endDate,
+      countryCode,
+      responseLength,
+      fastMode
+    } = req.body as ValyuSearchRequest;
+
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return res.status(400).json({
+        error: 'Query is required and must be a non-empty string'
+      });
+    }
+
+    if (query.length > 1000) {
+      return res.status(400).json({
+        error: 'Query must be 1000 characters or less'
+      });
+    }
+
+    if (includedSources) {
+      validateSearchDomains(includedSources);
+    }
+    if (excludedSources) {
+      validateSearchDomains(excludedSources);
+    }
+
+    const searchOptions = {
+      searchType: searchType || 'all',
+      maxNumResults: maxNumResults || 10,
+      maxPrice,
+      relevanceThreshold,
+      includedSources,
+      excludedSources,
+      startDate,
+      endDate,
+      countryCode,
+      responseLength: responseLength || 'short',
+      fastMode: fastMode || false
+    };
+
+    const result = await searchWithValyu(query, searchOptions);
+
+    // Save to database
+    try {
+      const session = sessionDb.create('valyu-search', query);
+      exaSearchDb.save(session.id, {
+        searchType: 'valyu',
+        results: result.results
+      });
+      logger.info(`Saved Valyu search session: ${session.id}`);
+    } catch (dbError) {
+      logger.error('Failed to save Valyu search result to database:', dbError);
+    }
+
+    res.json({
+      success: true,
+      query,
+      results: result.results,
+      txId: result.txId,
+      totalDeductionDollars: result.totalDeductionDollars,
+      totalCharacters: result.totalCharacters,
+      totalResults: result.results.length
+    });
+  } catch (error) {
+    logger.error('Valyu search error:', error);
+
+    if (error instanceof Error) {
+      logger.error('Error message:', error.message);
+      logger.error('Error stack:', error.stack);
+    }
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const statusCode = error instanceof Error && 'statusCode' in error ? (error as any).statusCode : 500;
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      details: 'Failed to perform Valyu search. Please try again or adjust your search parameters.'
+    });
+  }
+});
+
 // Get all sessions endpoint
 app.get('/api/sessions', async (req, res) => {
   try {
@@ -827,10 +935,10 @@ app.get('/api/sessions', async (req, res) => {
     const sessions = sessionDb.getAll(
       parseInt(limit as string),
       parseInt(offset as string),
-      type as 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | undefined
+      type as 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | 'valyu-search' | undefined
     );
     
-    const total = sessionDb.count(type as 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | undefined);
+    const total = sessionDb.count(type as 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | 'valyu-search' | undefined);
     
     res.json({
       sessions,
@@ -864,7 +972,7 @@ app.get('/api/sessions/:id', async (req, res) => {
         const latestResult = factCheckDb.getById(results[0].id);
         result = latestResult;
       }
-    } else if (session.type === 'exa-search' || session.type === 'linkup-search' || session.type === 'parallel-search' || session.type === 'tavily-search') {
+    } else if (session.type === 'exa-search' || session.type === 'linkup-search' || session.type === 'parallel-search' || session.type === 'tavily-search' || session.type === 'valyu-search') {
       // All web search types use the exaSearchDb (which stores all search results)
       const results = exaSearchDb.getBySessionId(id);
       if (results.length > 0) {
@@ -909,20 +1017,22 @@ app.delete('/api/sessions/:id', async (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const [perplexityHealth, exaHealth, linkupHealth, tavilyHealth] = await Promise.allSettled([
+    const [perplexityHealth, exaHealth, linkupHealth, tavilyHealth, valyuHealth] = await Promise.allSettled([
       checkPerplexityApiHealth(),
       checkExaApiHealth(),
       checkLinkupApiHealth(),
-      checkTavilyApiHealth()
+      checkTavilyApiHealth(),
+      checkValyuApiHealth()
     ]);
 
     const perplexityConnected = perplexityHealth.status === 'fulfilled' && perplexityHealth.value;
     const exaConnected = exaHealth.status === 'fulfilled' && exaHealth.value;
     const linkupConnected = linkupHealth.status === 'fulfilled' && linkupHealth.value;
     const tavilyConnected = tavilyHealth.status === 'fulfilled' && tavilyHealth.value;
+    const valyuConnected = valyuHealth.status === 'fulfilled' && valyuHealth.value;
 
     res.json({ 
-      status: (perplexityConnected || exaConnected || linkupConnected || tavilyConnected) ? 'ok' : 'error',
+      status: (perplexityConnected || exaConnected || linkupConnected || tavilyConnected || valyuConnected) ? 'ok' : 'error',
       apis: {
         perplexity: {
           configured: !!process.env.PERPLEXITY_API_KEY,
@@ -939,6 +1049,10 @@ app.get('/health', async (req, res) => {
         tavily: {
           configured: !!process.env.TAVILY_API_KEY,
           connected: tavilyConnected
+        },
+        valyu: {
+          configured: !!process.env.VALYU_API_KEY,
+          connected: valyuConnected
         }
       },
       models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro']
@@ -961,6 +1075,10 @@ app.get('/health', async (req, res) => {
         },
         tavily: {
           configured: !!process.env.TAVILY_API_KEY,
+          connected: false
+        },
+        valyu: {
+          configured: !!process.env.VALYU_API_KEY,
           connected: false
         }
       },

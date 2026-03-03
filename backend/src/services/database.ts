@@ -17,7 +17,7 @@ db.pragma('journal_mode = WAL'); // Enable Write-Ahead Logging for better perfor
 // Types
 export interface Session {
   id: string;
-  type: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search';
+  type: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | 'valyu-search';
   query: string;
   createdAt: string;
   updatedAt: string;
@@ -89,7 +89,7 @@ function initializeDatabase() {
       // Try to insert a test value with new type to see if constraint allows it
       const testStmt = db.prepare("INSERT INTO sessions (id, type, query, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)");
       const testId = 'migration-test-' + Date.now();
-      testStmt.run(testId, 'linkup-search', 'test', new Date().toISOString(), new Date().toISOString());
+      testStmt.run(testId, 'valyu-search', 'test', new Date().toISOString(), new Date().toISOString());
       // If successful, delete the test record
       db.prepare("DELETE FROM sessions WHERE id = ?").run(testId);
       logger.info('Sessions table already supports new session types');
@@ -101,7 +101,7 @@ function initializeDatabase() {
         db.exec(`
           CREATE TABLE sessions_new (
             id TEXT PRIMARY KEY,
-            type TEXT NOT NULL CHECK(type IN ('fact-check', 'exa-search', 'linkup-search', 'parallel-search', 'tavily-search')),
+            type TEXT NOT NULL CHECK(type IN ('fact-check', 'exa-search', 'linkup-search', 'parallel-search', 'tavily-search', 'valyu-search')),
             query TEXT NOT NULL,
             createdAt TEXT NOT NULL DEFAULT (datetime('now')),
             updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
@@ -132,7 +132,7 @@ function initializeDatabase() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
-      type TEXT NOT NULL CHECK(type IN ('fact-check', 'exa-search', 'linkup-search', 'parallel-search', 'tavily-search')),
+      type TEXT NOT NULL CHECK(type IN ('fact-check', 'exa-search', 'linkup-search', 'parallel-search', 'tavily-search', 'valyu-search')),
       query TEXT NOT NULL,
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
@@ -234,7 +234,7 @@ export const sessionDb = {
   /**
    * Create a new session
    */
-  create(type: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search', query: string): Session {
+  create(type: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | 'valyu-search', query: string): Session {
     const id = generateId();
     const now = new Date().toISOString();
     
@@ -275,7 +275,7 @@ export const sessionDb = {
   /**
    * Get all sessions with pagination
    */
-  getAll(limit: number = 50, offset: number = 0, type?: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search'): Session[] {
+  getAll(limit: number = 50, offset: number = 0, type?: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | 'valyu-search'): Session[] {
     let query = 'SELECT * FROM sessions';
     const params: any[] = [];
     
@@ -330,7 +330,7 @@ export const sessionDb = {
   /**
    * Get session count
    */
-  count(type?: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search'): number {
+  count(type?: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | 'valyu-search'): number {
     let query = 'SELECT COUNT(*) as count FROM sessions';
     const params: any[] = [];
     

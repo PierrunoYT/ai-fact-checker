@@ -4,9 +4,10 @@ import { exaApi } from '../api/exaApi';
 import { linkupApi } from '../api/linkupApi';
 import { parallelApi } from '../api/parallelApi';
 import { tavilyApi } from '../api/tavilyApi';
+import { valyuApi } from '../api/valyuApi';
 import { sessionsApi, type Session } from '../api/sessionsApi';
 import { validateStatement, validateDomainFilter } from '../utils/validation';
-import type { ExaSearchResponse, ExaSearchType, ExaCategory, LinkupSearchResponse, LinkupDepth, LinkupOutputType, ParallelSearchResponse, TavilySearchResponse, TavilySearchDepth, TavilyTopic } from '../types';
+import type { ExaSearchResponse, ExaSearchType, ExaCategory, LinkupSearchResponse, LinkupDepth, LinkupOutputType, ParallelSearchResponse, TavilySearchResponse, TavilySearchDepth, TavilyTopic, ValyuSearchResponse, ValyuSearchType, ValyuResponseLength } from '../types';
 
 import { Header } from './fact-checker/Header';
 import { FactCheckForm } from './fact-checker/FactCheckForm';
@@ -16,11 +17,12 @@ import { ExaSearchResults } from './fact-checker/ExaSearchResults';
 import { LinkupSearchResults } from './fact-checker/LinkupSearchResults';
 import { ParallelSearchResults } from './fact-checker/ParallelSearchResults';
 import { TavilySearchResults } from './fact-checker/TavilySearchResults';
+import { ValyuSearchResults } from './fact-checker/ValyuSearchResults';
 import { EmptyState } from './fact-checker/EmptyState';
 import { ErrorDisplay } from './fact-checker/ErrorDisplay';
 
 type TabType = 'fact-check' | 'web-search';
-type SearchProvider = 'exa' | 'linkup' | 'parallel' | 'tavily';
+type SearchProvider = 'exa' | 'linkup' | 'parallel' | 'tavily' | 'valyu';
 
 export const FactChecker: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('fact-check');
@@ -99,6 +101,23 @@ export const FactChecker: React.FC = () => {
   const [tavilyIncludeImages, setTavilyIncludeImages] = useState(false);
   const [tavilyIncludeRawContent, setTavilyIncludeRawContent] = useState(false);
   const [tavilyTopic, setTavilyTopic] = useState<TavilyTopic>('general');
+
+  // Valyu Search state
+  const [valyuQuery, setValyuQuery] = useState('');
+  const [valyuLoading, setValyuLoading] = useState(false);
+  const [valyuResult, setValyuResult] = useState<ValyuSearchResponse | null>(null);
+  const [valyuError, setValyuError] = useState<string | null>(null);
+  const [showValyuOptions, setShowValyuOptions] = useState(false);
+  const [valyuSearchType, setValyuSearchType] = useState<ValyuSearchType>('all');
+  const [valyuMaxNumResults, setValyuMaxNumResults] = useState(10);
+  const [valyuRelevanceThreshold, setValyuRelevanceThreshold] = useState(0.5);
+  const [valyuIncludedSources, setValyuIncludedSources] = useState('');
+  const [valyuExcludedSources, setValyuExcludedSources] = useState('');
+  const [valyuStartDate, setValyuStartDate] = useState('');
+  const [valyuEndDate, setValyuEndDate] = useState('');
+  const [valyuCountryCode, setValyuCountryCode] = useState('');
+  const [valyuResponseLength, setValyuResponseLength] = useState<ValyuResponseLength>('short');
+  const [valyuFastMode, setValyuFastMode] = useState(false);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -335,6 +354,7 @@ export const FactChecker: React.FC = () => {
     setLinkupError(null);
     setParallelError(null);
     setTavilyError(null);
+    setValyuError(null);
   };
 
   const handleParallelSearchSubmit = async (e: React.FormEvent) => {
@@ -378,6 +398,7 @@ export const FactChecker: React.FC = () => {
     setLinkupError(null);
     setParallelError(null);
     setTavilyError(null);
+    setValyuError(null);
   };
 
   const handleTavilySearchSubmit = async (e: React.FormEvent) => {
@@ -424,6 +445,61 @@ export const FactChecker: React.FC = () => {
       console.error('Error performing Tavily search:', error);
     } finally {
       setTavilyLoading(false);
+    }
+  };
+
+  const handleValyuSearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setValyuLoading(true);
+    setValyuError(null);
+    setValyuResult(null);
+
+    try {
+      if (!valyuQuery.trim()) {
+        throw new Error('Please enter a search query');
+      }
+
+      const includedSourcesArray = valyuIncludedSources.trim()
+        ? valyuIncludedSources.split(',').map(s => s.trim()).filter(s => s)
+        : undefined;
+
+      const excludedSourcesArray = valyuExcludedSources.trim()
+        ? valyuExcludedSources.split(',').map(s => s.trim()).filter(s => s)
+        : undefined;
+
+      const options: any = {
+        searchType: valyuSearchType,
+        maxNumResults: valyuMaxNumResults,
+        relevanceThreshold: valyuRelevanceThreshold,
+        responseLength: valyuResponseLength,
+        fastMode: valyuFastMode
+      };
+
+      if (includedSourcesArray && includedSourcesArray.length > 0) {
+        options.includedSources = includedSourcesArray;
+      }
+      if (excludedSourcesArray && excludedSourcesArray.length > 0) {
+        options.excludedSources = excludedSourcesArray;
+      }
+      if (valyuStartDate) {
+        options.startDate = valyuStartDate;
+      }
+      if (valyuEndDate) {
+        options.endDate = valyuEndDate;
+      }
+      if (valyuCountryCode) {
+        options.countryCode = valyuCountryCode;
+      }
+
+      const response = await valyuApi.search(valyuQuery, options);
+      setValyuResult(response);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setValyuError(message);
+      console.error('Error performing Valyu search:', error);
+    } finally {
+      setValyuLoading(false);
     }
   };
 
@@ -556,6 +632,32 @@ export const FactChecker: React.FC = () => {
             tavilyTopic={tavilyTopic}
             setTavilyTopic={setTavilyTopic}
             onTavilySubmit={handleTavilySearchSubmit}
+            valyuQuery={valyuQuery}
+            setValyuQuery={setValyuQuery}
+            valyuLoading={valyuLoading}
+            showValyuOptions={showValyuOptions}
+            setShowValyuOptions={setShowValyuOptions}
+            valyuSearchType={valyuSearchType}
+            setValyuSearchType={setValyuSearchType}
+            valyuMaxNumResults={valyuMaxNumResults}
+            setValyuMaxNumResults={setValyuMaxNumResults}
+            valyuRelevanceThreshold={valyuRelevanceThreshold}
+            setValyuRelevanceThreshold={setValyuRelevanceThreshold}
+            valyuIncludedSources={valyuIncludedSources}
+            setValyuIncludedSources={setValyuIncludedSources}
+            valyuExcludedSources={valyuExcludedSources}
+            setValyuExcludedSources={setValyuExcludedSources}
+            valyuStartDate={valyuStartDate}
+            setValyuStartDate={setValyuStartDate}
+            valyuEndDate={valyuEndDate}
+            setValyuEndDate={setValyuEndDate}
+            valyuCountryCode={valyuCountryCode}
+            setValyuCountryCode={setValyuCountryCode}
+            valyuResponseLength={valyuResponseLength}
+            setValyuResponseLength={setValyuResponseLength}
+            valyuFastMode={valyuFastMode}
+            setValyuFastMode={setValyuFastMode}
+            onValyuSubmit={handleValyuSearchSubmit}
             onProviderChange={handleProviderChange}
           />
         )}
@@ -564,7 +666,7 @@ export const FactChecker: React.FC = () => {
       {/* Right Panel - Results */}
       <div className={`flex-1 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} overflow-y-auto`}>
         <div className="p-8">
-          <ErrorDisplay error={error || exaError || linkupError || parallelError || tavilyError || null} isDarkMode={isDarkMode} />
+          <ErrorDisplay error={error || exaError || linkupError || parallelError || tavilyError || valyuError || null} isDarkMode={isDarkMode} />
 
           {activeTab === 'fact-check' && result && (
             <FactCheckResults
@@ -591,11 +693,15 @@ export const FactChecker: React.FC = () => {
             <TavilySearchResults result={tavilyResult} isDarkMode={isDarkMode} />
           )}
 
+          {activeTab === 'web-search' && searchProvider === 'valyu' && valyuResult && (
+            <ValyuSearchResults result={valyuResult} isDarkMode={isDarkMode} />
+          )}
+
           {activeTab === 'fact-check' && !result && !error && !loading && (
             <EmptyState type="fact-check" isDarkMode={isDarkMode} />
           )}
 
-          {activeTab === 'web-search' && !exaResult && !linkupResult && !parallelResult && !tavilyResult && !exaError && !linkupError && !parallelError && !tavilyError && !exaLoading && !linkupLoading && !parallelLoading && !tavilyLoading && (
+          {activeTab === 'web-search' && !exaResult && !linkupResult && !parallelResult && !tavilyResult && !valyuResult && !exaError && !linkupError && !parallelError && !tavilyError && !valyuError && !exaLoading && !linkupLoading && !parallelLoading && !tavilyLoading && !valyuLoading && (
             <EmptyState type="web-search" isDarkMode={isDarkMode} />
           )}
         </div>

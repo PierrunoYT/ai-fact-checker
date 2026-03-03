@@ -205,6 +205,47 @@ export interface TavilySearchResponse {
   totalResults: number;
 }
 
+// Valyu Search Types
+export type ValyuSearchType = 'web' | 'proprietary' | 'news' | 'all';
+export type ValyuResponseLength = 'short' | 'medium' | 'large' | 'max';
+
+export interface ValyuSearchRequest {
+  query: string;
+  searchType?: ValyuSearchType;
+  maxNumResults?: number;
+  maxPrice?: number;
+  relevanceThreshold?: number;
+  includedSources?: string[];
+  excludedSources?: string[];
+  startDate?: string;
+  endDate?: string;
+  countryCode?: string;
+  responseLength?: ValyuResponseLength;
+  fastMode?: boolean;
+}
+
+export interface ValyuSearchResult {
+  title: string;
+  url: string;
+  publishedDate?: string;
+  author?: string;
+  snippet?: string;
+  text?: string;
+  summary?: string;
+  highlights?: string[];
+  relevanceScore?: number;
+}
+
+export interface ValyuSearchResponse {
+  success: boolean;
+  query: string;
+  results: ValyuSearchResult[];
+  txId?: string;
+  totalDeductionDollars?: number;
+  totalCharacters?: number;
+  totalResults: number;
+}
+
 // Component Props Types
 export interface ModelSelectorProps {
   model: PerplexityModel;
