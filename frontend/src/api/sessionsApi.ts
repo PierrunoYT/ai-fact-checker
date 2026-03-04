@@ -2,7 +2,7 @@ import { apiClient } from './apiClient';
 
 export interface Session {
   id: string;
-  type: 'fact-check' | 'exa-search';
+  type: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | 'valyu-search';
   query: string;
   createdAt: string;
   updatedAt: string;
@@ -24,7 +24,7 @@ export const sessionsApi = {
   /**
    * Get all sessions
    */
-  async getAll(type?: 'fact-check' | 'exa-search', limit: number = 50, offset: number = 0): Promise<SessionsResponse> {
+  async getAll(type?: 'fact-check' | 'exa-search' | 'linkup-search' | 'parallel-search' | 'tavily-search' | 'valyu-search', limit: number = 50, offset: number = 0): Promise<SessionsResponse> {
     const params = new URLSearchParams();
     if (type) params.append('type', type);
     params.append('limit', limit.toString());

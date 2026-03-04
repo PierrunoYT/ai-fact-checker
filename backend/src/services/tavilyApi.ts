@@ -7,14 +7,16 @@ dotenv.config();
 
 interface TavilySearchRequest {
   query: string;
-  search_depth?: 'basic' | 'advanced';
+  search_depth?: 'basic' | 'advanced' | 'fast' | 'ultra-fast';
   max_results?: number;
   include_domains?: string[];
   exclude_domains?: string[];
-  include_answer?: boolean;
+  include_answer?: boolean | 'basic' | 'advanced';
   include_images?: boolean;
   include_raw_content?: boolean;
-  topic?: 'general' | 'news';
+  topic?: 'general' | 'news' | 'finance';
+  start_date?: string; // YYYY-MM-DD format
+  end_date?: string; // YYYY-MM-DD format
 }
 
 interface TavilySearchResult {
@@ -34,14 +36,16 @@ interface TavilySearchResponse {
 }
 
 interface TavilySearchOptions {
-  searchDepth?: 'basic' | 'advanced';
+  searchDepth?: 'basic' | 'advanced' | 'fast' | 'ultra-fast';
   maxResults?: number;
   includeDomains?: string[];
   excludeDomains?: string[];
-  includeAnswer?: boolean;
+  includeAnswer?: boolean | 'basic' | 'advanced';
   includeImages?: boolean;
   includeRawContent?: boolean;
-  topic?: 'general' | 'news';
+  topic?: 'general' | 'news' | 'finance';
+  startDate?: string; // YYYY-MM-DD format
+  endDate?: string; // YYYY-MM-DD format
 }
 
 interface FactCheckSearchResult {
@@ -90,6 +94,14 @@ function createTavilySearchRequest(
     request.include_raw_content = options.includeRawContent;
   }
 
+  if (options.startDate) {
+    request.start_date = options.startDate;
+  }
+
+  if (options.endDate) {
+    request.end_date = options.endDate;
+  }
+
   return request;
 }
 
@@ -103,6 +115,8 @@ export async function searchWithTavily(
   results: FactCheckSearchResult[];
   answer?: string;
   responseTime?: number;
+  startDate?: string;
+  endDate?: string;
 }> {
   logger.info(`Starting Tavily search for query: "${query.slice(0, 100)}${query.length > 100 ? '...' : ''}"`);
   logger.debug('Tavily search options:', options);

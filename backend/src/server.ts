@@ -48,7 +48,7 @@ app.use((req, res, next) => {
 // Types
 interface FactCheckRequest {
   statement: string;
-  model?: 'sonar' | 'sonar-pro' | 'sonar-reasoning' | 'sonar-reasoning-pro';
+  model?: 'sonar' | 'sonar-pro' | 'sonar-reasoning-pro' | 'sonar-deep-research';
   maxTokens?: number;
   temperature?: number;
   frequencyPenalty?: number;
@@ -528,7 +528,7 @@ app.post('/api/exa-search', async (req, res) => {
 interface LinkupSearchRequest {
   query: string;
   depth?: 'standard' | 'deep';
-  outputType?: 'sourcedAnswer' | 'raw';
+  outputType?: 'sourcedAnswer' | 'searchResults' | 'structured' | 'structuredWithSources';
   structuredOutputSchema?: any;
   includeImages?: boolean;
   fromDate?: string;
@@ -537,6 +537,7 @@ interface LinkupSearchRequest {
   includeDomains?: string[];
   includeInlineCitations?: boolean;
   includeSources?: boolean;
+  maxResults?: number;
 }
 
 app.post('/api/linkup-search', async (req, res) => {
@@ -552,7 +553,8 @@ app.post('/api/linkup-search', async (req, res) => {
       excludeDomains,
       includeDomains,
       includeInlineCitations,
-      includeSources
+      includeSources,
+      maxResults
     } = req.body as LinkupSearchRequest;
 
     // Validate query
@@ -594,7 +596,8 @@ app.post('/api/linkup-search', async (req, res) => {
       excludeDomains,
       includeDomains,
       includeInlineCitations: includeInlineCitations !== undefined ? includeInlineCitations : false,
-      includeSources: includeSources !== undefined ? includeSources : true
+      includeSources: includeSources !== undefined ? includeSources : true,
+      maxResults
     };
 
     const result = await searchWithLinkup(query, searchOptions);
@@ -646,6 +649,7 @@ interface ParallelSearchRequest {
   searchQueries?: string[];
   maxResults?: number;
   maxCharsPerResult?: number;
+  mode?: 'one-shot' | 'agentic' | 'fast';
 }
 
 app.post('/api/parallel-search', async (req, res) => {
@@ -654,7 +658,8 @@ app.post('/api/parallel-search', async (req, res) => {
       objective,
       searchQueries,
       maxResults,
-      maxCharsPerResult
+      maxCharsPerResult,
+      mode
     } = req.body as ParallelSearchRequest;
 
     // Validate objective
@@ -673,7 +678,8 @@ app.post('/api/parallel-search', async (req, res) => {
     const searchOptions = {
       searchQueries: searchQueries && searchQueries.length > 0 ? searchQueries : undefined,
       maxResults: maxResults || 10,
-      maxCharsPerResult: maxCharsPerResult || 10000
+      maxCharsPerResult: maxCharsPerResult || 10000,
+      mode
     };
 
     const result = await searchWithParallel(objective, searchOptions);
@@ -721,14 +727,16 @@ app.post('/api/parallel-search', async (req, res) => {
 // Tavily search endpoint
 interface TavilySearchRequest {
   query: string;
-  searchDepth?: 'basic' | 'advanced';
+  searchDepth?: 'basic' | 'advanced' | 'fast' | 'ultra-fast';
   maxResults?: number;
   includeDomains?: string[];
   excludeDomains?: string[];
-  includeAnswer?: boolean;
+  includeAnswer?: boolean | 'basic' | 'advanced';
   includeImages?: boolean;
   includeRawContent?: boolean;
-  topic?: 'general' | 'news';
+  topic?: 'general' | 'news' | 'finance';
+  startDate?: string; // YYYY-MM-DD format
+  endDate?: string; // YYYY-MM-DD format
 }
 
 app.post('/api/tavily-search', async (req, res) => {
@@ -742,7 +750,9 @@ app.post('/api/tavily-search', async (req, res) => {
       includeAnswer,
       includeImages,
       includeRawContent,
-      topic
+      topic,
+      startDate,
+      endDate
     } = req.body as TavilySearchRequest;
 
     // Validate query
@@ -774,7 +784,9 @@ app.post('/api/tavily-search', async (req, res) => {
       includeAnswer: includeAnswer || false,
       includeImages: includeImages || false,
       includeRawContent: includeRawContent || false,
-      topic: topic || 'general'
+      topic: topic || 'general',
+      startDate,
+      endDate
     };
 
     const result = await searchWithTavily(query, searchOptions);
@@ -834,6 +846,7 @@ interface ValyuSearchRequest {
   countryCode?: string;
   responseLength?: 'short' | 'medium' | 'large' | 'max';
   fastMode?: boolean;
+  category?: string;
 }
 
 app.post('/api/valyu-search', async (req, res) => {
@@ -850,7 +863,8 @@ app.post('/api/valyu-search', async (req, res) => {
       endDate,
       countryCode,
       responseLength,
-      fastMode
+      fastMode,
+      category
     } = req.body as ValyuSearchRequest;
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
@@ -883,7 +897,8 @@ app.post('/api/valyu-search', async (req, res) => {
       endDate,
       countryCode,
       responseLength: responseLength || 'short',
-      fastMode: fastMode || false
+      fastMode: fastMode || false,
+      category
     };
 
     const result = await searchWithValyu(query, searchOptions);
@@ -1017,10 +1032,11 @@ app.delete('/api/sessions/:id', async (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const [perplexityHealth, exaHealth, linkupHealth, tavilyHealth, valyuHealth] = await Promise.allSettled([
+    const [perplexityHealth, exaHealth, linkupHealth, parallelHealth, tavilyHealth, valyuHealth] = await Promise.allSettled([
       checkPerplexityApiHealth(),
       checkExaApiHealth(),
       checkLinkupApiHealth(),
+      checkParallelApiHealth(),
       checkTavilyApiHealth(),
       checkValyuApiHealth()
     ]);
@@ -1028,11 +1044,12 @@ app.get('/health', async (req, res) => {
     const perplexityConnected = perplexityHealth.status === 'fulfilled' && perplexityHealth.value;
     const exaConnected = exaHealth.status === 'fulfilled' && exaHealth.value;
     const linkupConnected = linkupHealth.status === 'fulfilled' && linkupHealth.value;
+    const parallelConnected = parallelHealth.status === 'fulfilled' && parallelHealth.value;
     const tavilyConnected = tavilyHealth.status === 'fulfilled' && tavilyHealth.value;
     const valyuConnected = valyuHealth.status === 'fulfilled' && valyuHealth.value;
 
     res.json({ 
-      status: (perplexityConnected || exaConnected || linkupConnected || tavilyConnected || valyuConnected) ? 'ok' : 'error',
+      status: (perplexityConnected || exaConnected || linkupConnected || parallelConnected || tavilyConnected || valyuConnected) ? 'ok' : 'error',
       apis: {
         perplexity: {
           configured: !!process.env.PERPLEXITY_API_KEY,
@@ -1046,6 +1063,10 @@ app.get('/health', async (req, res) => {
           configured: !!process.env.LINKUP_API_KEY,
           connected: linkupConnected
         },
+        parallel: {
+          configured: !!process.env.PARALLEL_API_KEY,
+          connected: parallelConnected
+        },
         tavily: {
           configured: !!process.env.TAVILY_API_KEY,
           connected: tavilyConnected
@@ -1055,7 +1076,7 @@ app.get('/health', async (req, res) => {
           connected: valyuConnected
         }
       },
-      models: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro']
+      models: ['sonar', 'sonar-pro', 'sonar-reasoning-pro', 'sonar-deep-research']
     });
   } catch (error) {
     res.status(500).json({
@@ -1071,6 +1092,10 @@ app.get('/health', async (req, res) => {
         },
         linkup: {
           configured: !!process.env.LINKUP_API_KEY,
+          connected: false
+        },
+        parallel: {
+          configured: !!process.env.PARALLEL_API_KEY,
           connected: false
         },
         tavily: {

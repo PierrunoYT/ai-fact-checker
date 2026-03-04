@@ -9,6 +9,7 @@ interface ParallelSearchRequest {
   objective: string;
   search_queries?: string[];
   max_results?: number;
+  mode?: 'one-shot' | 'agentic' | 'fast';
   excerpts?: {
     max_chars_per_result?: number;
   };
@@ -35,6 +36,7 @@ interface ParallelSearchOptions {
   searchQueries?: string[];
   maxResults?: number;
   maxCharsPerResult?: number;
+  mode?: 'one-shot' | 'agentic' | 'fast';
 }
 
 interface FactCheckSearchResult {
@@ -63,6 +65,10 @@ function createParallelSearchRequest(
 
   if (options.searchQueries && options.searchQueries.length > 0) {
     request.search_queries = options.searchQueries;
+  }
+
+  if (options.mode) {
+    request.mode = options.mode;
   }
 
   if (options.maxCharsPerResult) {

@@ -23,6 +23,7 @@ interface ValyuSearchRequest {
   response_length?: ValyuResponseLength;
   fast_mode?: boolean;
   url_only?: boolean;
+  category?: string;
 }
 
 interface ValyuSearchResultItem {
@@ -64,6 +65,7 @@ export interface ValyuSearchOptions {
   countryCode?: string;
   responseLength?: ValyuResponseLength;
   fastMode?: boolean;
+  category?: string;
 }
 
 interface FactCheckSearchResult {
@@ -111,6 +113,9 @@ function createValyuSearchRequest(
   }
   if (options.countryCode) {
     request.country_code = options.countryCode;
+  }
+  if (options.category) {
+    request.category = options.category;
   }
 
   return request;

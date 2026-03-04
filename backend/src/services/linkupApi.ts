@@ -8,7 +8,7 @@ dotenv.config();
 interface LinkupSearchRequest {
   q: string;
   depth?: 'standard' | 'deep';
-  outputType?: 'sourcedAnswer' | 'raw';
+  outputType?: 'sourcedAnswer' | 'searchResults' | 'structured' | 'structuredWithSources';
   structuredOutputSchema?: any;
   includeImages?: boolean;
   fromDate?: string; // YYYY-MM-DD format
@@ -17,6 +17,7 @@ interface LinkupSearchRequest {
   includeDomains?: string[];
   includeInlineCitations?: boolean;
   includeSources?: boolean;
+  maxResults?: number;
 }
 
 interface LinkupSource {
@@ -32,7 +33,7 @@ interface LinkupSearchResponse {
 
 interface LinkupSearchOptions {
   depth?: 'standard' | 'deep';
-  outputType?: 'sourcedAnswer' | 'raw';
+  outputType?: 'sourcedAnswer' | 'searchResults' | 'structured' | 'structuredWithSources';
   structuredOutputSchema?: any;
   includeImages?: boolean;
   fromDate?: string; // YYYY-MM-DD or MM/DD/YYYY format
@@ -41,6 +42,7 @@ interface LinkupSearchOptions {
   includeDomains?: string[];
   includeInlineCitations?: boolean;
   includeSources?: boolean;
+  maxResults?: number;
 }
 
 interface FactCheckSearchResult {
@@ -103,7 +105,8 @@ function createLinkupSearchRequest(
     includeInlineCitations: options.includeInlineCitations || false,
     includeSources: options.includeSources !== false, // Default to true
     excludeDomains: options.excludeDomains,
-    includeDomains: options.includeDomains
+    includeDomains: options.includeDomains,
+    maxResults: options.maxResults
   };
 
   // Convert dates to YYYY-MM-DD format
