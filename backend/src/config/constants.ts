@@ -20,7 +20,7 @@ export const CONFIG = {
   MODELS: {
     'sonar': {
       maxTokens: 4000,
-      contextLength: 127000,
+      contextLength: 128000,
       hasReasoning: false
     },
     'sonar-pro': {
@@ -28,14 +28,14 @@ export const CONFIG = {
       contextLength: 200000,
       hasReasoning: false
     },
-    'sonar-reasoning': {
-      maxTokens: 4000,
-      contextLength: 127000,
-      hasReasoning: true
-    },
     'sonar-reasoning-pro': {
       maxTokens: 8000,
-      contextLength: 127000,
+      contextLength: 128000,
+      hasReasoning: true
+    },
+    'sonar-deep-research': {
+      maxTokens: 8000,
+      contextLength: 128000,
       hasReasoning: true
     }
   } as const,
@@ -67,7 +67,7 @@ export const CONFIG = {
   VALIDATION: {
     MAX_STATEMENT_LENGTH: 10000,
     MAX_DOMAINS: 20,
-    VALID_MODELS: ['sonar', 'sonar-pro', 'sonar-reasoning', 'sonar-reasoning-pro'] as const,
+    VALID_MODELS: ['sonar', 'sonar-pro', 'sonar-reasoning-pro', 'sonar-deep-research'] as const,
     VALID_RECENCY: ['month', 'week', 'day', 'hour'] as const,
     VALID_CONTEXT_SIZE: ['low', 'medium', 'high'] as const
   }

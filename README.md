@@ -12,10 +12,10 @@ A powerful fact-checking application that verifies statements using Perplexity A
 - Streaming support for real-time updates
 
 ### 🤖 Multiple AI Models
-- `sonar`: Fast checks (127k context, 4k max tokens)
+- `sonar`: Fast checks (128k context, 4k max tokens)
 - `sonar-pro`: Enhanced capabilities (200k context, 8k max tokens)
-- `sonar-reasoning`: Detailed analysis with citations (127k context, 4k max tokens)
-- `sonar-reasoning-pro`: Premium model with extensive reasoning (127k context, 8k max tokens)
+- `sonar-reasoning-pro`: Premium model with extensive reasoning (128k context, 8k max tokens)
+- `sonar-deep-research`: Exhaustive research model across hundreds of sources (128k context, 8k max tokens)
 
 ### 🌐 Multiple Search Providers
 - **Exa AI**: Neural search with content extraction, summaries, and highlights
@@ -106,7 +106,8 @@ A powerful fact-checking application that verifies statements using Perplexity A
 ### Fact Checking
 1. **Select Model**
    - `sonar/sonar-pro`: Quick fact checks
-   - `sonar-reasoning/pro`: Detailed analysis with reasoning
+   - `sonar-reasoning-pro`: Detailed analysis with reasoning
+   - `sonar-deep-research`: Exhaustive multi-source research
 
 2. **Enter Statement**
    - Type or paste any statement
@@ -173,7 +174,7 @@ Content-Type: application/json
 
 {
   "statement": string,
-  "model": "sonar" | "sonar-pro" | "sonar-reasoning" | "sonar-reasoning-pro",
+  "model": "sonar" | "sonar-pro" | "sonar-reasoning-pro" | "sonar-deep-research",
   "maxTokens": number,
   "temperature": number,
   "frequencyPenalty": number,
@@ -222,15 +223,16 @@ Content-Type: application/json
 {
   "query": string,
   "depth": "standard" | "deep", // default: "standard"
-  "outputType": "sourcedAnswer" | "raw", // default: "sourcedAnswer"
-  "structuredOutputSchema": object, // optional JSON schema for structured output
+  "outputType": "sourcedAnswer" | "searchResults" | "structured" | "structuredWithSources", // default: "sourcedAnswer"
+  "structuredOutputSchema": object, // required when outputType is "structured" or "structuredWithSources"
   "includeImages": boolean, // default: false
   "fromDate": string, // YYYY-MM-DD or MM/DD/YYYY format
   "toDate": string, // YYYY-MM-DD or MM/DD/YYYY format
   "excludeDomains": string[],
   "includeDomains": string[],
   "includeInlineCitations": boolean, // default: false
-  "includeSources": boolean // default: true
+  "includeSources": boolean, // default: true
+  "maxResults": number // max number of search results to return
 }
 ```
 
@@ -260,8 +262,9 @@ Content-Type: application/json
 {
   "objective": string,
   "searchQueries": string[], // optional, auto-generated if not provided
-  "maxResults": number, // default: 10
-  "maxCharsPerResult": number // default: 10000
+  "maxResults": number, // 1-20, default: 10
+  "maxCharsPerResult": number, // default: 10000
+  "mode": "one-shot" | "agentic" | "fast" // default: "one-shot"
 }
 ```
 
@@ -283,14 +286,16 @@ Content-Type: application/json
 
 {
   "query": string,
-  "searchDepth": "basic" | "advanced", // default: "basic"
-  "maxResults": number, // default: 10
+  "searchDepth": "basic" | "advanced" | "fast" | "ultra-fast", // default: "basic"
+  "maxResults": number, // 0-20, default: 10
   "includeDomains": string[],
   "excludeDomains": string[],
-  "includeAnswer": boolean, // default: false
+  "includeAnswer": boolean | "basic" | "advanced", // default: false
   "includeImages": boolean, // default: false
   "includeRawContent": boolean, // default: false
-  "topic": "general" | "news" // default: "general"
+  "topic": "general" | "news" | "finance", // default: "general"
+  "startDate": string, // YYYY-MM-DD format
+  "endDate": string // YYYY-MM-DD format
 }
 ```
 
@@ -323,7 +328,8 @@ Content-Type: application/json
   "endDate": string, // YYYY-MM-DD format
   "countryCode": string, // ISO 2-letter code, e.g. "US"
   "responseLength": "short" | "medium" | "large" | "max", // default: "short"
-  "fastMode": boolean // default: false
+  "fastMode": boolean, // default: false
+  "category": string // optional natural language category to guide search context
 }
 ```
 
@@ -387,7 +393,7 @@ GET /health
       "connected": true
     }
   },
-  "models": ["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro"]
+  "models": ["sonar", "sonar-pro", "sonar-reasoning-pro", "sonar-deep-research"]
 }
 ```
 

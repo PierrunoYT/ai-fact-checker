@@ -48,7 +48,7 @@ export interface FactCheckRequest {
 }
 
 // Model and Configuration Types
-export type PerplexityModel = 'sonar' | 'sonar-pro' | 'sonar-reasoning' | 'sonar-reasoning-pro';
+export type PerplexityModel = 'sonar' | 'sonar-pro' | 'sonar-reasoning-pro' | 'sonar-deep-research';
 export type SearchRecency = 'month' | 'week' | 'day' | 'hour';
 export type SearchContextSize = 'low' | 'medium' | 'high';
 
@@ -97,7 +97,7 @@ export interface ExaSearchResponse {
 
 // Linkup Search Types
 export type LinkupDepth = 'standard' | 'deep';
-export type LinkupOutputType = 'sourcedAnswer' | 'raw';
+export type LinkupOutputType = 'sourcedAnswer' | 'searchResults' | 'structured' | 'structuredWithSources';
 
 export interface LinkupSearchRequest {
   query: string;
@@ -111,6 +111,7 @@ export interface LinkupSearchRequest {
   includeDomains?: string[];
   includeInlineCitations?: boolean;
   includeSources?: boolean;
+  maxResults?: number;
 }
 
 export interface LinkupSource {
@@ -146,6 +147,7 @@ export interface ParallelSearchRequest {
   searchQueries?: string[];
   maxResults?: number;
   maxCharsPerResult?: number;
+  mode?: 'one-shot' | 'agentic' | 'fast';
 }
 
 export interface ParallelSearchResult {
@@ -169,8 +171,8 @@ export interface ParallelSearchResponse {
 }
 
 // Tavily Search Types
-export type TavilySearchDepth = 'basic' | 'advanced';
-export type TavilyTopic = 'general' | 'news';
+export type TavilySearchDepth = 'basic' | 'advanced' | 'fast' | 'ultra-fast';
+export type TavilyTopic = 'general' | 'news' | 'finance';
 
 export interface TavilySearchRequest {
   query: string;
@@ -178,10 +180,12 @@ export interface TavilySearchRequest {
   maxResults?: number;
   includeDomains?: string[];
   excludeDomains?: string[];
-  includeAnswer?: boolean;
+  includeAnswer?: boolean | 'basic' | 'advanced';
   includeImages?: boolean;
   includeRawContent?: boolean;
   topic?: TavilyTopic;
+  startDate?: string; // YYYY-MM-DD format
+  endDate?: string; // YYYY-MM-DD format
 }
 
 export interface TavilySearchResult {
@@ -222,6 +226,7 @@ export interface ValyuSearchRequest {
   countryCode?: string;
   responseLength?: ValyuResponseLength;
   fastMode?: boolean;
+  category?: string;
 }
 
 export interface ValyuSearchResult {
@@ -383,9 +388,9 @@ export interface UseThemeReturn {
 // Constants
 export const SUPPORTED_MODELS: readonly PerplexityModel[] = [
   'sonar',
-  'sonar-pro', 
-  'sonar-reasoning',
-  'sonar-reasoning-pro'
+  'sonar-pro',
+  'sonar-reasoning-pro',
+  'sonar-deep-research'
 ] as const;
 
 export const SEARCH_RECENCY_OPTIONS: readonly SearchRecency[] = [

@@ -32,8 +32,12 @@ describe('Backend Validation Utilities', () => {
     it('should pass for valid models', () => {
       expect(() => validateModel('sonar')).not.toThrow();
       expect(() => validateModel('sonar-pro')).not.toThrow();
-      expect(() => validateModel('sonar-reasoning')).not.toThrow();
       expect(() => validateModel('sonar-reasoning-pro')).not.toThrow();
+      expect(() => validateModel('sonar-deep-research')).not.toThrow();
+    });
+
+    it('should throw for deprecated sonar-reasoning model', () => {
+      expect(() => validateModel('sonar-reasoning')).toThrow(ValidationError);
     });
 
     it('should pass for undefined model', () => {

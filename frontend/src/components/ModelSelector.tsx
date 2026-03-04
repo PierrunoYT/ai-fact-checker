@@ -16,7 +16,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
     {
       value: 'sonar',
       label: 'Sonar',
-      description: 'Fast fact-checking with 127k context'
+      description: 'Fast fact-checking with 128k context'
     },
     {
       value: 'sonar-pro',
@@ -24,14 +24,14 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
       description: 'Enhanced capabilities with 200k context'
     },
     {
-      value: 'sonar-reasoning',
-      label: 'Sonar Reasoning',
-      description: 'Detailed analysis with citations'
-    },
-    {
       value: 'sonar-reasoning-pro',
       label: 'Sonar Reasoning Pro',
       description: 'Premium model with extensive reasoning'
+    },
+    {
+      value: 'sonar-deep-research',
+      label: 'Sonar Deep Research',
+      description: 'Exhaustive research across hundreds of sources'
     }
   ];
 
