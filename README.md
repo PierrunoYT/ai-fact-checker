@@ -186,7 +186,8 @@ Content-Type: application/json
   "searchBeforeDate": string, // MM/DD/YYYY format
   "searchContextSize": "low" | "medium" | "high",
   "returnImages": boolean,
-  "returnRelatedQuestions": boolean
+  "returnRelatedQuestions": boolean,
+  "stream": boolean // Set to true to enable SSE streaming
 }
 ```
 
@@ -222,6 +223,7 @@ Content-Type: application/json
   "query": string,
   "depth": "standard" | "deep", // default: "standard"
   "outputType": "sourcedAnswer" | "raw", // default: "sourcedAnswer"
+  "structuredOutputSchema": object, // optional JSON schema for structured output
   "includeImages": boolean, // default: false
   "fromDate": string, // YYYY-MM-DD or MM/DD/YYYY format
   "toDate": string, // YYYY-MM-DD or MM/DD/YYYY format
@@ -313,6 +315,7 @@ Content-Type: application/json
   "query": string,
   "searchType": "web" | "proprietary" | "news" | "all", // default: "all"
   "maxNumResults": number, // 1-20, default: 10
+  "maxPrice": number, // optional max cost in dollars per query
   "relevanceThreshold": number, // 0.0-1.0, default: 0.5
   "includedSources": string[], // e.g. ["pubmed", "arxiv"]
   "excludedSources": string[],
@@ -368,6 +371,10 @@ GET /health
       "connected": true
     },
     "linkup": {
+      "configured": true,
+      "connected": true
+    },
+    "parallel": {
       "configured": true,
       "connected": true
     },

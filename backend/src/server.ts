@@ -1017,10 +1017,11 @@ app.delete('/api/sessions/:id', async (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const [perplexityHealth, exaHealth, linkupHealth, tavilyHealth, valyuHealth] = await Promise.allSettled([
+    const [perplexityHealth, exaHealth, linkupHealth, parallelHealth, tavilyHealth, valyuHealth] = await Promise.allSettled([
       checkPerplexityApiHealth(),
       checkExaApiHealth(),
       checkLinkupApiHealth(),
+      checkParallelApiHealth(),
       checkTavilyApiHealth(),
       checkValyuApiHealth()
     ]);
@@ -1028,11 +1029,12 @@ app.get('/health', async (req, res) => {
     const perplexityConnected = perplexityHealth.status === 'fulfilled' && perplexityHealth.value;
     const exaConnected = exaHealth.status === 'fulfilled' && exaHealth.value;
     const linkupConnected = linkupHealth.status === 'fulfilled' && linkupHealth.value;
+    const parallelConnected = parallelHealth.status === 'fulfilled' && parallelHealth.value;
     const tavilyConnected = tavilyHealth.status === 'fulfilled' && tavilyHealth.value;
     const valyuConnected = valyuHealth.status === 'fulfilled' && valyuHealth.value;
 
     res.json({ 
-      status: (perplexityConnected || exaConnected || linkupConnected || tavilyConnected || valyuConnected) ? 'ok' : 'error',
+      status: (perplexityConnected || exaConnected || linkupConnected || parallelConnected || tavilyConnected || valyuConnected) ? 'ok' : 'error',
       apis: {
         perplexity: {
           configured: !!process.env.PERPLEXITY_API_KEY,
@@ -1045,6 +1047,10 @@ app.get('/health', async (req, res) => {
         linkup: {
           configured: !!process.env.LINKUP_API_KEY,
           connected: linkupConnected
+        },
+        parallel: {
+          configured: !!process.env.PARALLEL_API_KEY,
+          connected: parallelConnected
         },
         tavily: {
           configured: !!process.env.TAVILY_API_KEY,
@@ -1071,6 +1077,10 @@ app.get('/health', async (req, res) => {
         },
         linkup: {
           configured: !!process.env.LINKUP_API_KEY,
+          connected: false
+        },
+        parallel: {
+          configured: !!process.env.PARALLEL_API_KEY,
           connected: false
         },
         tavily: {
